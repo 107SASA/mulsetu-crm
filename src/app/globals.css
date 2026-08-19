@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #18181b;
+
+  /* Accent — a single modern indigo used for primary actions, links, and focus rings */
+  --accent-50: #eef2ff;
+  --accent-100: #e0e7ff;
+  --accent-500: #6366f1;
+  --accent-600: #4f46e5;
+  --accent-700: #4338ca;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-accent-50: var(--accent-50);
+  --color-accent-100: var(--accent-100);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
+  --color-accent-700: var(--accent-700);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #09090b;
+    --foreground: #fafafa;
+    --accent-50: #1e1b4b;
+    --accent-100: #312e81;
+    --accent-500: #818cf8;
+    --accent-600: #6366f1;
+    --accent-700: #818cf8;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--accent-100);
+  color: var(--accent-700);
+}
+
+/* Slim, unobtrusive scrollbar for horizontally-scrolling regions (board, tables) */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-100) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--accent-100);
+  border-radius: 9999px;
 }
