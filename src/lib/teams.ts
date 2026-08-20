@@ -1,6 +1,15 @@
 import type { AssignmentTeam } from "@/app/projects/project-assignment-fields";
 import type { createClient } from "@/lib/supabase/server";
 
+export type AssignedTeam = { id: string; name: string };
+
+export function readAssignedTeam(value: unknown): AssignedTeam | null {
+  if (!value || typeof value !== "object") return null;
+  const team = value as { id?: unknown; name?: unknown };
+  if (typeof team.name !== "string") return null;
+  return { id: typeof team.id === "string" ? team.id : "", name: team.name };
+}
+
 export async function fetchAssignmentTeams(
   supabase: Awaited<ReturnType<typeof createClient>>
 ): Promise<AssignmentTeam[]> {

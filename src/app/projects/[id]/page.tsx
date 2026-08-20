@@ -14,7 +14,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CARD } from "@/lib/card-styles";
 import { FIELD } from "@/lib/field-styles";
-import { fetchAssignmentTeams } from "@/lib/teams";
+import { fetchAssignmentTeams, readAssignedTeam } from "@/lib/teams";
 
 export default async function ProjectDetailPage({
   params,
@@ -43,7 +43,7 @@ export default async function ProjectDetailPage({
         .single()
     : withTeam;
   if (!project) notFound();
-  const assignedTeam = "team" in project ? project.team : null;
+  const assignedTeam = readAssignedTeam("team" in project ? project.team : null);
 
   const { data: links } = await supabase
     .from("project_links")

@@ -8,6 +8,7 @@ import { ButtonLink } from "@/components/ui/button-link";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CARD_INTERACTIVE } from "@/lib/card-styles";
+import { readAssignedTeam } from "@/lib/teams";
 
 const FILTER_SELECT =
   "rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/30 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100";
@@ -35,14 +36,23 @@ export default async function ProjectsPage({
   if (clientFilter) query = query.eq("client_id", clientFilter);
   if (validStage) query = query.eq("stage", validStage);
 
-  let { data: projects, error: projectsError } = await query;
-  if (projectsError) {
-    let fallback = supabase.from("projects").select(selectWithoutTeam).order("deadline", { ascending: true, nullsFirst: false });
-    if (clientFilter) fallback = fallback.eq("client_id", clientFilter);
-    if (validStage) fallback = fallback.eq("stage", validStage);
-    const retry = await fallback;
-    projects = retry.data;
-  }
+  const { data: firstPass, error: projectsError } = await query;
+  const retry = projectsError
+    ? await (() => {
+        let fallback = supabase
+          .from("projects")
+          .select(selectWithoutTeam)
+          .order("deadline", { ascending: true, nullsFirst: false });
+        if (clientFilter) fallback = fallback.eq("client_id", clientFilter);
+        if (validStage) fallback = fallback.eq("stage", validStage);
+        return fallback;
+      })()
+    : null;
+
+  const projects = ((retry?.data ?? firstPass) ?? []).map((project) => ({
+    ...project,
+    team: readAssignedTeam((project as { team?: unknown }).team),
+  }));
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
@@ -104,7 +114,7 @@ export default async function ProjectsPage({
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">
                     {p.client?.company_name}
                     {p.assignee && ` · ${p.assignee.full_name || p.assignee.email}`}
-                    {"team" in p && p.team && ` · Team: ${p.team.name}`}
+                    {p.team && ` · Team: ${p.team.name}`}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { PipelineBoard, type BoardProject } from "./pipeline-board";
+import { readAssignedTeam } from "@/lib/teams";
 
 export default async function BoardPage() {
   const [profile, supabase] = await Promise.all([getCurrentProfile(), createClient()]);
@@ -33,9 +34,9 @@ export default async function BoardPage() {
       </div>
 
       <PipelineBoard
-        projects={((projects ?? []) as BoardProject[]).map((project) => ({
+        projects={((projects ?? []) as Array<Omit<BoardProject, "team"> & { team?: unknown }>).map((project) => ({
           ...project,
-          team: project.team ?? null,
+          team: readAssignedTeam(project.team),
         }))}
         isAdmin={Boolean(isAdmin)}
       />
