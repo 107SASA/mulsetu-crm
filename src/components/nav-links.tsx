@@ -7,9 +7,14 @@ export function NavLinks({ links }: { links: { href: string; label: string }[] }
   const pathname = usePathname();
 
   return (
-    <nav className="scroll-thin order-3 -mx-4 flex w-full gap-1 overflow-x-auto border-t border-zinc-100 px-4 pt-2 text-sm sm:order-0 sm:w-auto sm:border-none sm:px-0 sm:pt-0 dark:border-zinc-800">
+    <nav className="scroll-thin order-last -mx-4 flex w-full min-w-0 gap-1 overflow-x-auto border-t border-zinc-100 px-4 pt-2 text-sm sm:order-0 sm:flex-1 sm:border-none sm:px-0 sm:pt-0 dark:border-zinc-800">
       {links.map((link) => {
-        const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+        const isActive =
+          link.href === "/"
+            ? pathname === "/"
+            : link.href === "/tasks"
+              ? pathname === "/tasks" || (pathname.startsWith("/tasks/") && !pathname.startsWith("/tasks/team"))
+              : pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
           <Link
             key={link.href}

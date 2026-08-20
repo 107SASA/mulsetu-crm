@@ -14,6 +14,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CARD } from "@/lib/card-styles";
 import { FIELD } from "@/lib/field-styles";
+import { fetchAssignmentTeams } from "@/lib/teams";
 
 export default async function ProjectDetailPage({
   params,
@@ -27,12 +28,22 @@ export default async function ProjectDetailPage({
   const [profile, supabase] = await Promise.all([getCurrentProfile(), createClient()]);
   const isAdmin = profile?.role === "admin";
 
-  const { data: project } = await supabase
+  const withTeam = await supabase
     .from("projects")
-    .select("*, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email)")
+    .select(
+      "*, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email), team:teams!projects_assigned_team_id_fkey(id, name)"
+    )
     .eq("id", id)
     .single();
+  const { data: project } = withTeam.error
+    ? await supabase
+        .from("projects")
+        .select("*, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email)")
+        .eq("id", id)
+        .single()
+    : withTeam;
   if (!project) notFound();
+  const assignedTeam = "team" in project ? project.team : null;
 
   const { data: links } = await supabase
     .from("project_links")
@@ -51,6 +62,7 @@ export default async function ProjectDetailPage({
     .order("created_at", { ascending: false });
 
   const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").order("full_name");
+  const teams = isAdmin ? await fetchAssignmentTeams(supabase) : [];
 
   const updateAction = updateProjectRecord.bind(null, id);
   const deleteAction = deleteProjectRecord.bind(null, id);
@@ -82,9 +94,10 @@ export default async function ProjectDetailPage({
               {project.assignee.full_name || project.assignee.email}
             </>
           ) : (
-            <span className="italic">Unassigned</span>
+            <span className="italic">No developer assigned</span>
           )}
         </span>
+        <span>{assignedTeam ? `Team: ${assignedTeam.name}` : "No team assigned"}</span>
       </div>
 
       <section className={`${CARD} mt-6 p-5`}>
@@ -96,6 +109,7 @@ export default async function ProjectDetailPage({
             action={updateAction}
             clients={clients}
             developers={profiles ?? []}
+            teams={teams}
             defaults={project}
             error={error}
             submitLabel="Save changes"
@@ -107,6 +121,8 @@ export default async function ProjectDetailPage({
               <dt className="text-xs uppercase tracking-wide text-zinc-400">Description</dt>
               <dd className="mt-0.5 text-zinc-900 dark:text-zinc-100">{project.description || "—"}</dd>
             </div>
+            <Detail label="Assigned developer" value={project.assignee ? project.assignee.full_name || project.assignee.email : "Unassigned"} />
+            <Detail label="Assigned team" value={assignedTeam?.name ?? "None"} />
             <Detail label="Start date" value={project.start_date ? new Date(project.start_date).toLocaleDateString() : null} />
             <Detail label="Deadline" value={project.deadline ? new Date(project.deadline).toLocaleDateString() : null} />
           </dl>

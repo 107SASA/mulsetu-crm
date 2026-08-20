@@ -26,7 +26,8 @@ export default async function CheckEmailPage({
             <>
               We sent a confirmation link to{" "}
               {email ? <span className="font-medium text-zinc-700 dark:text-zinc-300">{email}</span> : "your email"}.
-              Click it to activate your account, then come back and sign in.
+              Click it to activate your account, then come back and sign in. Check spam
+              if you don&apos;t see it — and wait a minute before requesting another email.
             </>
           )}
         </p>

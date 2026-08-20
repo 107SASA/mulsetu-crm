@@ -16,7 +16,7 @@ export function StageSelect({
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div onClick={(e) => e.stopPropagation()}>
+    <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
       <select
         value={currentStage}
         disabled={isPending}

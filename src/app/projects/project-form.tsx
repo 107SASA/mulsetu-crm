@@ -1,6 +1,7 @@
 import { STAGE_OPTIONS, PRIORITY_OPTIONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { FIELD, FIELD_LABEL } from "@/lib/field-styles";
+import { ProjectAssignmentFields, type AssignmentTeam } from "./project-assignment-fields";
 
 type ProjectDefaults = {
   client_id?: string;
@@ -12,12 +13,14 @@ type ProjectDefaults = {
   deadline?: string | null;
   budget?: number | null;
   assigned_to?: string | null;
+  assigned_team_id?: string | null;
 };
 
 export function ProjectForm({
   action,
   clients,
   developers,
+  teams,
   defaults,
   error,
   submitLabel,
@@ -26,6 +29,7 @@ export function ProjectForm({
   action: (formData: FormData) => void;
   clients: { id: string; company_name: string }[];
   developers: { id: string; full_name: string; email: string }[];
+  teams: AssignmentTeam[];
   defaults?: ProjectDefaults;
   error?: string;
   submitLabel: string;
@@ -63,19 +67,12 @@ export function ProjectForm({
 
       <Field label="Project name" name="name" defaultValue={defaults?.name} required />
 
-      <div>
-        <label htmlFor="assigned_to" className={FIELD_LABEL}>
-          Assigned developer
-        </label>
-        <select id="assigned_to" name="assigned_to" defaultValue={defaults?.assigned_to ?? ""} className={`mt-1 ${FIELD}`}>
-          <option value="">— Unassigned —</option>
-          {developers.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.full_name || d.email}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ProjectAssignmentFields
+        developers={developers}
+        teams={teams}
+        assignedTo={defaults?.assigned_to}
+        assignedTeamId={defaults?.assigned_team_id}
+      />
 
       <div>
         <label htmlFor="description" className={FIELD_LABEL}>

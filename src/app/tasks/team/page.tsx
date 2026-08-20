@@ -42,9 +42,8 @@ export default async function TeamTasksPage({
     byDeveloper.set(t.assigned_to ?? "unassigned", list);
   }
 
-  const developersToShow = (profiles ?? []).filter(
-    (p) => byDeveloper.has(p.id) || developerFilter === p.id
-  );
+  const developersToShow = profiles ?? [];
+  const unassignedTasks = byDeveloper.get("unassigned") ?? [];
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
@@ -82,8 +81,8 @@ export default async function TeamTasksPage({
         )}
       </form>
 
-      {developersToShow.length === 0 ? (
-        <EmptyState icon="🧑‍🤝‍🧑" title="No tasks match these filters." />
+      {developersToShow.length === 0 && unassignedTasks.length === 0 ? (
+        <EmptyState icon="🧑‍🤝‍🧑" title="No developers yet." />
       ) : (
         <div className="mt-6 space-y-8">
           {developersToShow.map((dev) => {
@@ -111,6 +110,21 @@ export default async function TeamTasksPage({
               </section>
             );
           })}
+          {!developerFilter && unassignedTasks.length > 0 && (
+            <section>
+              <h2 className="mb-2 flex items-center justify-between text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                Unassigned
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                  {unassignedTasks.length}
+                </span>
+              </h2>
+              <div className="space-y-2">
+                {unassignedTasks.map((t) => (
+                  <TaskCard key={t.id} task={t} canEditStatus />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>

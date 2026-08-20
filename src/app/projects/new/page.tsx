@@ -5,6 +5,7 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { createProjectRecord } from "../actions";
 import { ProjectForm } from "../project-form";
 import { CARD } from "@/lib/card-styles";
+import { fetchAssignmentTeams } from "@/lib/teams";
 
 export default async function NewProjectPage({
   searchParams,
@@ -18,9 +19,10 @@ export default async function NewProjectPage({
   }
 
   const supabase = await createClient();
-  const [{ data: clients }, { data: developers }] = await Promise.all([
+  const [{ data: clients }, { data: developers }, teams] = await Promise.all([
     supabase.from("clients").select("id, company_name").order("company_name"),
     supabase.from("profiles").select("id, full_name, email").order("full_name"),
+    fetchAssignmentTeams(supabase),
   ]);
 
   if (!clients || clients.length === 0) {
@@ -46,6 +48,7 @@ export default async function NewProjectPage({
           action={createProjectRecord}
           clients={clients}
           developers={developers ?? []}
+          teams={teams}
           defaults={{ client_id: client }}
           error={error}
           submitLabel="Create project"

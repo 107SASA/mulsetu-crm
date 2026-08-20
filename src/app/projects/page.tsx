@@ -23,19 +23,26 @@ export default async function ProjectsPage({
 
   const { data: clients } = await supabase.from("clients").select("id, company_name").order("company_name");
 
-  let query = supabase
-    .from("projects")
-    .select(
-      "id, name, stage, priority, deadline, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email)"
-    )
-    .order("deadline", { ascending: true, nullsFirst: false });
+  const selectWithTeam =
+    "id, name, stage, priority, deadline, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email), team:teams!projects_assigned_team_id_fkey(id, name)";
+  const selectWithoutTeam =
+    "id, name, stage, priority, deadline, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email)";
+
+  let query = supabase.from("projects").select(selectWithTeam).order("deadline", { ascending: true, nullsFirst: false });
 
   const validStage = STAGE_OPTIONS.find((s) => s.value === stageFilter)?.value;
 
   if (clientFilter) query = query.eq("client_id", clientFilter);
   if (validStage) query = query.eq("stage", validStage);
 
-  const { data: projects } = await query;
+  let { data: projects, error: projectsError } = await query;
+  if (projectsError) {
+    let fallback = supabase.from("projects").select(selectWithoutTeam).order("deadline", { ascending: true, nullsFirst: false });
+    if (clientFilter) fallback = fallback.eq("client_id", clientFilter);
+    if (validStage) fallback = fallback.eq("stage", validStage);
+    const retry = await fallback;
+    projects = retry.data;
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
@@ -97,6 +104,7 @@ export default async function ProjectsPage({
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">
                     {p.client?.company_name}
                     {p.assignee && ` · ${p.assignee.full_name || p.assignee.email}`}
+                    {"team" in p && p.team && ` · Team: ${p.team.name}`}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs">

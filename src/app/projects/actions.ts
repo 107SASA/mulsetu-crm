@@ -28,6 +28,46 @@ function readProjectFields(formData: FormData) {
   };
 }
 
+const CREATE_TEAM = "__create__";
+
+async function resolveAssignedTeamId(
+  formData: FormData,
+  createdBy: string,
+  errorRedirect: string
+) {
+  const assignedTeamId = String(formData.get("assigned_team_id") ?? "");
+  if (!assignedTeamId) return null;
+  if (assignedTeamId !== CREATE_TEAM) return assignedTeamId;
+
+  const name = String(formData.get("new_team_name") ?? "").trim();
+  const memberIds = formData.getAll("new_team_members").map(String).filter(Boolean);
+  if (!name) {
+    redirect(errorRedirect + "?error=" + encodeURIComponent("New team name is required."));
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("teams")
+    .insert({ name, created_by: createdBy })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    redirect(errorRedirect + "?error=" + encodeURIComponent(error?.message ?? "Could not create team."));
+  }
+
+  if (memberIds.length > 0) {
+    const { error: membersError } = await supabase
+      .from("team_members")
+      .insert(memberIds.map((profile_id) => ({ team_id: data.id, profile_id })));
+    if (membersError) {
+      redirect(errorRedirect + "?error=" + encodeURIComponent(membersError.message));
+    }
+  }
+
+  return data.id;
+}
+
 async function requireAdmin(redirectTo: string) {
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "admin") {
@@ -49,17 +89,20 @@ export async function createProjectRecord(formData: FormData) {
 
   const supabase = await createClient();
   const profile = await getCurrentProfile();
+  const assigned_team_id = await resolveAssignedTeamId(formData, profile!.id, "/projects/new");
   const { data, error } = await supabase
     .from("projects")
-    .insert({ ...fields, created_by: profile!.id })
+    .insert({ ...fields, assigned_team_id, created_by: profile!.id })
     .select("id")
     .single();
 
-  if (error) {
-    redirect(`/projects/new?client=${fields.client_id}&error=` + encodeURIComponent(error.message));
+  if (error || !data) {
+    redirect(`/projects/new?client=${fields.client_id}&error=` + encodeURIComponent(error?.message ?? "Could not create project."));
   }
 
   revalidatePath("/projects");
+  revalidatePath("/board");
+  revalidatePath("/teams");
   redirect(`/projects/${data.id}`);
 }
 
@@ -72,7 +115,9 @@ export async function updateProjectRecord(projectId: string, formData: FormData)
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("projects").update(fields).eq("id", projectId);
+  const profile = await getCurrentProfile();
+  const assigned_team_id = await resolveAssignedTeamId(formData, profile!.id, `/projects/${projectId}`);
+  const { error } = await supabase.from("projects").update({ ...fields, assigned_team_id }).eq("id", projectId);
 
   if (error) {
     redirect(`/projects/${projectId}?error=` + encodeURIComponent(error.message));
@@ -80,6 +125,8 @@ export async function updateProjectRecord(projectId: string, formData: FormData)
 
   revalidatePath("/projects");
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/board");
+  revalidatePath("/teams");
   redirect(`/projects/${projectId}`);
 }
 

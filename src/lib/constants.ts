@@ -3,7 +3,7 @@ import type { Enums } from "@/lib/supabase/database.types";
 export const STAGE_OPTIONS: { value: Enums<"project_stage">; label: string }[] = [
   { value: "incoming", label: "Incoming / Lead" },
   { value: "requirements", label: "Requirements" },
-  { value: "in_progress", label: "In Progress" },
+  { value: "in_progress", label: "In Development" },
   { value: "review_testing", label: "Review / Testing" },
   { value: "client_review", label: "Client Review" },
   { value: "completed", label: "Completed" },

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signIn, signUp } from "./actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { PasswordField } from "@/components/ui/password-field";
 import { CARD } from "@/lib/card-styles";
 
 export default async function LoginPage({
@@ -35,43 +36,23 @@ export default async function LoginPage({
           {mode === "signin" ? (
             <form action={signIn} className="space-y-4">
               <Field label="Email" name="email" type="email" autoComplete="email" required />
-              <div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Password
-                  </label>
+              <PasswordField
+                autoComplete="current-password"
+                required
+                headerRight={
                   <Link href="/login/forgot-password" className="text-xs font-medium text-accent-600 hover:underline dark:text-accent-500">
                     Forgot password?
                   </Link>
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-base text-zinc-900 shadow-sm transition-shadow focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/30 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                />
-              </div>
-              <Button type="submit" variant="primary" className="w-full">
-                Sign in
-              </Button>
+                }
+              />
+              <SubmitButton pendingLabel="Signing in…">Sign in</SubmitButton>
             </form>
           ) : (
             <form action={signUp} className="space-y-4">
               <Field label="Full name" name="full_name" type="text" autoComplete="name" required />
               <Field label="Email" name="email" type="email" autoComplete="email" required />
-              <Field
-                label="Password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                helperText="At least 8 characters."
-              />
-              <Button type="submit" variant="primary" className="w-full">
-                Create account
-              </Button>
+              <PasswordField autoComplete="new-password" required helperText="At least 8 characters." />
+              <SubmitButton pendingLabel="Creating account…">Create account</SubmitButton>
             </form>
           )}
         </div>
