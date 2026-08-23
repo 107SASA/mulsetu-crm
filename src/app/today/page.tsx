@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CARD } from "@/lib/card-styles";
 import { FIELD, FIELD_INLINE, FIELD_LABEL_SM } from "@/lib/field-styles";
 import { createScheduleItem, deleteScheduleItem } from "./actions";
+import { PageHeading } from "@/components/page-heading";
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -61,9 +62,11 @@ export default async function TodayPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-        {viewingDeveloperId === profile.id ? "Your day" : `${viewingProfile?.full_name || viewingProfile?.email}'s day`}
-      </h1>
+      <PageHeading
+        kicker="Work"
+        title={viewingDeveloperId === profile.id ? "Today" : `${viewingProfile?.full_name || viewingProfile?.email}'s day`}
+        description="Schedule and tasks due on the selected date."
+      />
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -93,10 +96,10 @@ export default async function TodayPage({
           </div>
         )}
         <Button type="submit" variant="secondary">
-          Go
+          Show this day
         </Button>
-        <Link href="/today" className="self-center text-zinc-500 underline hover:text-accent-600 dark:text-zinc-400">
-          Today
+        <Link href="/today" className="self-center text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+          Jump to today
         </Link>
       </form>
 

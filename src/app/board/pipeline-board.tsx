@@ -58,15 +58,15 @@ export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[];
   return (
     <>
       {isAdmin && (
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Drag a card into another column, or use the dropdown on the card.
+        <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+          Drag a card to a column, or pick a stage from the dropdown.
         </p>
       )}
       {error && (
         <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>
       )}
 
-      <div className="scroll-thin mt-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-4 sm:overflow-x-auto sm:pb-4">
+      <div className="scroll-thin -mx-4 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:gap-4 sm:px-0 sm:pb-4">
         {STAGE_OPTIONS.map((stage) => {
           const stageProjects = optimisticProjects.filter((project) => project.stage === stage.value);
           const isOver = overStage === stage.value;
@@ -74,7 +74,7 @@ export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[];
           return (
             <section
               key={stage.value}
-              className={`rounded-xl sm:w-72 sm:shrink-0 ${isOver ? "bg-accent-50/60 dark:bg-accent-100/5" : ""}`}
+              className={`w-[min(80vw,18rem)] shrink-0 snap-start rounded-xl sm:w-72 ${isOver ? "bg-accent-50/60 dark:bg-accent-100/5" : ""}`}
               onDragOver={(event) => {
                 if (!isAdmin) return;
                 event.preventDefault();

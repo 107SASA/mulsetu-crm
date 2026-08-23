@@ -1,7 +1,8 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #fafafa;
+  --background: #f4f4f5;
   --foreground: #18181b;
 
   /* Accent — a single modern indigo used for primary actions, links, and focus rings */
@@ -24,16 +25,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #fafafa;
-    --accent-50: #1e1b4b;
-    --accent-100: #312e81;
-    --accent-500: #818cf8;
-    --accent-600: #6366f1;
-    --accent-700: #818cf8;
-  }
+html.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --accent-50: #1e1b4b;
+  --accent-100: #312e81;
+  --accent-500: #818cf8;
+  --accent-600: #6366f1;
+  --accent-700: #818cf8;
 }
 
 body {

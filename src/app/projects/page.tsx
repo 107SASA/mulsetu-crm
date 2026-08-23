@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CARD_INTERACTIVE } from "@/lib/card-styles";
 import { readAssignedTeam } from "@/lib/teams";
+import { PageHeading } from "@/components/page-heading";
 
 const FILTER_SELECT =
   "rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/30 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100";
@@ -56,14 +57,18 @@ export default async function ProjectsPage({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Projects</h1>
-        {isAdmin && (
-          <ButtonLink href="/projects/new" variant="primary" size="sm">
-            + New project
-          </ButtonLink>
-        )}
-      </div>
+      <PageHeading
+        kicker="Records"
+        title="Projects"
+        description="Filter by client or stage, then open a project for details."
+        actions={
+          isAdmin ? (
+            <ButtonLink href="/projects/new" variant="primary" size="sm">
+              New project
+            </ButtonLink>
+          ) : undefined
+        }
+      />
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

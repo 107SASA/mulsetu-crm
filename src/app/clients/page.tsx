@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/ui/button-link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/ui/avatar";
 import { CARD, CARD_INTERACTIVE } from "@/lib/card-styles";
+import { PageHeading } from "@/components/page-heading";
 
 export default async function ClientsPage({
   searchParams,
@@ -22,14 +23,18 @@ export default async function ClientsPage({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Clients</h1>
-        {isAdmin && (
-          <ButtonLink href="/clients/new" variant="primary" size="sm">
-            + New client
-          </ButtonLink>
-        )}
-      </div>
+      <PageHeading
+        kicker="Records"
+        title="Clients"
+        description="Companies and contacts you work with."
+        actions={
+          isAdmin ? (
+            <ButtonLink href="/clients/new" variant="primary" size="sm">
+              New client
+            </ButtonLink>
+          ) : undefined
+        }
+      />
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

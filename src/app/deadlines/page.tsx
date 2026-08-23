@@ -4,6 +4,7 @@ import { priorityColor, priorityLabel, stageLabel } from "@/lib/constants";
 import { deadlineRisk } from "@/lib/project-risk";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeading } from "@/components/page-heading";
 
 const RISK_BORDER: Record<string, string> = {
   overdue: "border-l-4 border-l-red-500",
@@ -31,12 +32,16 @@ export default async function DeadlinesPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Upcoming deadlines</h1>
-        <Link href="/board" className="text-sm text-zinc-500 hover:text-accent-600 hover:underline dark:text-zinc-400">
-          View pipeline board
-        </Link>
-      </div>
+      <PageHeading
+        kicker="Work"
+        title="Deadlines"
+        description="Open projects with a due date, soonest first."
+        actions={
+          <Link href="/board" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+            Pipeline
+          </Link>
+        }
+      />
 
       {groups.size === 0 ? (
         <EmptyState icon="⏰" title="No open projects have a deadline set." />

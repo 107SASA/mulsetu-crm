@@ -40,16 +40,19 @@ export function ProfileMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="flex min-h-10 items-center gap-2 rounded-full py-0.5 pl-0.5 pr-1.5 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:hover:bg-zinc-800"
       >
         <Avatar name={displayName} size="md" />
+        <span className="hidden max-w-[8rem] truncate text-sm font-medium text-zinc-700 sm:block dark:text-zinc-200">
+          {displayName}
+        </span>
         <span className="sr-only">Open profile menu</span>
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-30 mt-2 w-64 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+          className="absolute right-0 z-30 mt-2 w-[min(16rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
         >
           <div className="flex items-center gap-3 border-b border-zinc-100 px-3 py-3 dark:border-zinc-800">
             <Avatar name={displayName} size="md" />
@@ -64,7 +67,6 @@ export function ProfileMenu({
             onClick={() => setOpen(false)}
             className="flex items-center gap-2 px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            <span aria-hidden>🔑</span>
             Change password
           </Link>
           <form action={signOut}>

@@ -5,6 +5,7 @@ import { TaskCard } from "@/components/task-card";
 import { TaskForm } from "./task-form";
 import { createTask } from "./actions";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeading } from "@/components/page-heading";
 
 export default async function MyTasksPage({
   searchParams,
@@ -28,14 +29,18 @@ export default async function MyTasksPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">My Tasks</h1>
-        {profile.role === "admin" && (
-          <Link href="/tasks/team" className="text-sm text-zinc-500 hover:text-accent-600 hover:underline dark:text-zinc-400">
-            View team tasks
-          </Link>
-        )}
-      </div>
+      <PageHeading
+        kicker="Work"
+        title="My tasks"
+        description="Everything currently assigned to you."
+        actions={
+          profile.role === "admin" ? (
+            <Link href="/tasks/team" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+              Team tasks
+            </Link>
+          ) : undefined
+        }
+      />
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CARD } from "@/lib/card-styles";
 import { FIELD, FIELD_LABEL } from "@/lib/field-styles";
+import { PageHeading } from "@/components/page-heading";
 
 export default async function TeamsPage({
   searchParams,
@@ -40,10 +41,11 @@ export default async function TeamsPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Teams</h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-        Group developers, then assign a team to a project. You can also create a team while adding a project.
-      </p>
+      <PageHeading
+        kicker="Team"
+        title="Teams"
+        description="Group developers, then assign a team when you create or edit a project."
+      />
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>

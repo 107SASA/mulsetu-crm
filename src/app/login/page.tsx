@@ -3,6 +3,7 @@ import { signIn, signUp } from "./actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { PasswordField } from "@/components/ui/password-field";
 import { CARD } from "@/lib/card-styles";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default async function LoginPage({
   searchParams,
@@ -17,11 +18,8 @@ export default async function LoginPage({
     <div className="flex flex-1 items-center justify-center bg-linear-to-b from-accent-50/60 to-transparent px-4 py-12 dark:from-accent-100/5">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-accent-600 text-lg font-bold text-white shadow-sm">
-            M
-          </span>
-          <h1 className="mt-4 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Mulsetu CRM</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <BrandLogo size="lg" className="mx-auto" />
+          <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
             {mode === "signin" ? "Sign in to your account" : "Create your account"}
           </p>
         </div>

@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FIELD_INLINE } from "@/lib/field-styles";
+import { PageHeading } from "@/components/page-heading";
 
 export default async function TeamTasksPage({
   searchParams,
@@ -47,12 +48,16 @@ export default async function TeamTasksPage({
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Team tasks</h1>
-        <Link href="/tasks" className="text-sm text-zinc-500 hover:text-accent-600 hover:underline dark:text-zinc-400">
-          My tasks
-        </Link>
-      </div>
+      <PageHeading
+        kicker="Team"
+        title="Team tasks"
+        description="What each developer is working on."
+        actions={
+          <Link href="/tasks" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+            My tasks
+          </Link>
+        }
+      />
 
       <form className="mt-4 flex flex-wrap items-center gap-3 text-sm" method="get">
         <select name="developer" defaultValue={developerFilter ?? ""} className={FIELD_INLINE}>

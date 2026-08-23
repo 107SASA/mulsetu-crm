@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { PipelineBoard, type BoardProject } from "./pipeline-board";
 import { readAssignedTeam } from "@/lib/teams";
+import { PageHeading } from "@/components/page-heading";
 
 export default async function BoardPage() {
   const [profile, supabase] = await Promise.all([getCurrentProfile(), createClient()]);
@@ -26,12 +27,16 @@ export default async function BoardPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Pipeline board</h1>
-        <Link href="/projects" className="text-sm text-zinc-500 hover:text-accent-600 hover:underline dark:text-zinc-400">
-          View as list
-        </Link>
-      </div>
+      <PageHeading
+        kicker="Work"
+        title="Pipeline"
+        description="Projects grouped by stage."
+        actions={
+          <Link href="/projects" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+            View as list
+          </Link>
+        }
+      />
 
       <PipelineBoard
         projects={((projects ?? []) as Array<Omit<BoardProject, "team"> & { team?: unknown }>).map((project) => ({
