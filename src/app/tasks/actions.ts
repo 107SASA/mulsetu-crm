@@ -7,6 +7,10 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from "@/lib/constants";
 import type { Enums } from "@/lib/supabase/database.types";
 
+function withQuery(path: string, key: string, value: string) {
+  return `${path}${path.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
+}
+
 // Creates a task. Admins can assign to anyone; developers can only assign to
 // themselves — RLS enforces this too, but we validate here for a clean error
 // instead of a raw database rejection.
@@ -19,13 +23,13 @@ export async function createTask(projectId: string | null, formData: FormData) {
   const assignedTo = String(formData.get("assigned_to") ?? profile!.id);
   const priority = String(formData.get("priority") ?? "medium");
   const dueDate = String(formData.get("due_date") ?? "") || null;
-  const returnTo = projectId ? `/projects/${projectId}` : "/tasks";
+  const returnTo = projectId ? `/projects/${projectId}?tab=tasks` : "/tasks";
 
   if (!title) {
-    redirect(returnTo + "?error=" + encodeURIComponent("Task title is required."));
+    redirect(withQuery(returnTo, "error", "Task title is required."));
   }
   if (profile!.role !== "admin" && assignedTo !== profile!.id) {
-    redirect(returnTo + "?error=" + encodeURIComponent("You can only assign tasks to yourself."));
+    redirect(withQuery(returnTo, "error", "You can only assign tasks to yourself."));
   }
 
   const validPriority = PRIORITY_OPTIONS.find((p) => p.value === priority)?.value ?? "medium";
@@ -42,7 +46,7 @@ export async function createTask(projectId: string | null, formData: FormData) {
   });
 
   if (error) {
-    redirect(returnTo + "?error=" + encodeURIComponent(error.message));
+    redirect(withQuery(returnTo, "error", error.message));
   }
 
   revalidatePath("/tasks");
@@ -77,16 +81,16 @@ export async function updateTaskStatus(taskId: string, status: string) {
 
 export async function deleteTask(projectId: string | null, taskId: string) {
   const profile = await getCurrentProfile();
+  const returnTo = projectId ? `/projects/${projectId}?tab=tasks` : "/tasks";
   if (!profile || profile.role !== "admin") {
-    redirect((projectId ? `/projects/${projectId}` : "/tasks") + "?error=" + encodeURIComponent("Only admins can delete tasks."));
+    redirect(withQuery(returnTo, "error", "Only admins can delete tasks."));
   }
 
   const supabase = await createClient();
   const { error } = await supabase.from("tasks").delete().eq("id", taskId);
 
-  const returnTo = projectId ? `/projects/${projectId}` : "/tasks";
   if (error) {
-    redirect(returnTo + "?error=" + encodeURIComponent(error.message));
+    redirect(withQuery(returnTo, "error", error.message));
   }
 
   revalidatePath("/tasks");

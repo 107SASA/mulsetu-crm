@@ -56,6 +56,5 @@ export async function deleteTeam(teamId: string) {
   }
   revalidatePath("/teams");
   revalidatePath("/projects");
-  revalidatePath("/board");
   redirect("/teams");
 }

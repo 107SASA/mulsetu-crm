@@ -22,11 +22,10 @@ export default async function ClientsPage({
     .order("company_name");
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
       <PageHeading
-        kicker="Records"
         title="Clients"
-        description="Companies and contacts you work with."
+        description="Companies and the projects you do for them."
         actions={
           isAdmin ? (
             <ButtonLink href="/clients/new" variant="primary" size="sm">

@@ -2,9 +2,12 @@ import { STAGE_OPTIONS, PRIORITY_OPTIONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { FIELD, FIELD_LABEL } from "@/lib/field-styles";
 import { ProjectAssignmentFields, type AssignmentTeam } from "./project-assignment-fields";
+import { ProjectTypeFields } from "./project-type-fields";
+import { readProjectType, type ProjectWorkType } from "@/lib/project-work";
 
 type ProjectDefaults = {
-  client_id?: string;
+  client_id?: string | null;
+  project_type?: string | null;
   name?: string;
   description?: string;
   stage?: string;
@@ -35,6 +38,8 @@ export function ProjectForm({
   submitLabel: string;
   showBudget: boolean;
 }) {
+  const defaultType: ProjectWorkType = readProjectType(defaults?.project_type, defaults?.client_id);
+
   return (
     <form action={action} className="space-y-4">
       {error && (
@@ -43,27 +48,11 @@ export function ProjectForm({
         </p>
       )}
 
-      <div>
-        <label htmlFor="client_id" className={FIELD_LABEL}>
-          Client
-        </label>
-        <select
-          id="client_id"
-          name="client_id"
-          required
-          defaultValue={defaults?.client_id ?? ""}
-          className={`mt-1 ${FIELD}`}
-        >
-          <option value="" disabled>
-            Select a client…
-          </option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.company_name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ProjectTypeFields
+        clients={clients}
+        defaultType={defaultType}
+        defaultClientId={defaults?.client_id ?? undefined}
+      />
 
       <Field label="Project name" name="name" defaultValue={defaults?.name} required />
 

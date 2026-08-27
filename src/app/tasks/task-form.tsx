@@ -15,7 +15,7 @@ export function TaskForm({
 }) {
   return (
     <form action={action} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-      <div className="flex-1 sm:min-w-[10rem]">
+      <div className="min-w-0 flex-1 sm:min-w-[10rem]">
         <label htmlFor="title" className={FIELD_LABEL_SM}>
           Task title
         </label>
@@ -23,7 +23,7 @@ export function TaskForm({
       </div>
 
       {isAdmin ? (
-        <div>
+        <div className="w-full min-w-0 sm:w-auto">
           <label htmlFor="assigned_to" className={FIELD_LABEL_SM}>
             Assign to
           </label>
@@ -39,7 +39,7 @@ export function TaskForm({
         <input type="hidden" name="assigned_to" value={currentUserId} />
       )}
 
-      <div>
+      <div className="w-full min-w-0 sm:w-auto">
         <label htmlFor="priority" className={FIELD_LABEL_SM}>
           Priority
         </label>
@@ -52,14 +52,14 @@ export function TaskForm({
         </select>
       </div>
 
-      <div>
+      <div className="w-full min-w-0 sm:w-auto">
         <label htmlFor="due_date" className={FIELD_LABEL_SM}>
           Due date
         </label>
         <input id="due_date" name="due_date" type="date" className={`mt-1 ${FIELD_INLINE}`} />
       </div>
 
-      <Button type="submit" variant="secondary">
+      <Button type="submit" variant="secondary" className="w-full sm:w-auto">
         + Add task
       </Button>
     </form>

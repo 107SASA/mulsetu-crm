@@ -5,8 +5,8 @@ const base =
   "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none";
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "px-2.5 py-1.5 text-xs",
-  md: "px-4 py-2.5 text-sm",
+  sm: "min-h-11 px-2.5 py-1.5 text-xs sm:min-h-0",
+  md: "min-h-11 px-4 py-2.5 text-sm sm:min-h-0",
 };
 
 const variants: Record<ButtonVariant, string> = {

@@ -119,7 +119,7 @@ export type Database = {
           assigned_team_id: string | null
           assigned_to: string | null
           budget: number | null
-          client_id: string
+          client_id: string | null
           created_at: string
           created_by: string | null
           deadline: string | null
@@ -127,6 +127,7 @@ export type Database = {
           id: string
           name: string
           priority: Database["public"]["Enums"]["priority_level"]
+          project_type: Database["public"]["Enums"]["project_type"]
           stage: Database["public"]["Enums"]["project_stage"]
           start_date: string | null
           updated_at: string
@@ -135,7 +136,7 @@ export type Database = {
           assigned_team_id?: string | null
           assigned_to?: string | null
           budget?: number | null
-          client_id: string
+          client_id?: string | null
           created_at?: string
           created_by?: string | null
           deadline?: string | null
@@ -143,6 +144,7 @@ export type Database = {
           id?: string
           name: string
           priority?: Database["public"]["Enums"]["priority_level"]
+          project_type?: Database["public"]["Enums"]["project_type"]
           stage?: Database["public"]["Enums"]["project_stage"]
           start_date?: string | null
           updated_at?: string
@@ -151,7 +153,7 @@ export type Database = {
           assigned_team_id?: string | null
           assigned_to?: string | null
           budget?: number | null
-          client_id?: string
+          client_id?: string | null
           created_at?: string
           created_by?: string | null
           deadline?: string | null
@@ -159,6 +161,7 @@ export type Database = {
           id?: string
           name?: string
           priority?: Database["public"]["Enums"]["priority_level"]
+          project_type?: Database["public"]["Enums"]["project_type"]
           stage?: Database["public"]["Enums"]["project_stage"]
           start_date?: string | null
           updated_at?: string
@@ -398,6 +401,7 @@ export type Database = {
         | "client_review"
         | "completed"
         | "on_hold_cancelled"
+      project_type: "client" | "internal"
       schedule_item_type: "meeting" | "call" | "other"
       task_status: "todo" | "in_progress" | "done" | "blocked"
       user_role: "admin" | "developer"
@@ -538,6 +542,7 @@ export const Constants = {
         "completed",
         "on_hold_cancelled",
       ],
+      project_type: ["client", "internal"],
       schedule_item_type: ["meeting", "call", "other"],
       task_status: ["todo", "in_progress", "done", "blocked"],
       user_role: ["admin", "developer"],

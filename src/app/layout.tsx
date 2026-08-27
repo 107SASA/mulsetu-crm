@@ -46,7 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full overflow-x-hidden">
+      <body className="h-full overflow-x-hidden">
         <AppShell>{children}</AppShell>
       </body>
     </html>

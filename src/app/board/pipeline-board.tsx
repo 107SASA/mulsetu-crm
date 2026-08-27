@@ -66,7 +66,7 @@ export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[];
         <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>
       )}
 
-      <div className="scroll-thin -mx-4 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:gap-4 sm:px-0 sm:pb-4">
+      <div className="scroll-thin -mx-4 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-6 sm:mx-0 sm:gap-4 sm:px-0 sm:pb-4">
         {STAGE_OPTIONS.map((stage) => {
           const stageProjects = optimisticProjects.filter((project) => project.stage === stage.value);
           const isOver = overStage === stage.value;
@@ -140,7 +140,9 @@ export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[];
                           <p className="text-sm font-medium text-zinc-900 hover:text-accent-600 dark:text-zinc-50 dark:hover:text-accent-500">
                             {project.name}
                           </p>
-                          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{project.client?.company_name}</p>
+                          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                            {project.client?.company_name || "Internal product"}
+                          </p>
                         </Link>
 
                         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">

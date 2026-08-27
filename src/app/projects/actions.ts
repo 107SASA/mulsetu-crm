@@ -6,17 +6,21 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import type { Enums } from "@/lib/supabase/database.types";
 import { STAGE_OPTIONS, PRIORITY_OPTIONS } from "@/lib/constants";
+import { readProjectType } from "@/lib/project-work";
 
 function readProjectFields(formData: FormData) {
   const stage = String(formData.get("stage") ?? "incoming");
   const priority = String(formData.get("priority") ?? "medium");
   const budgetRaw = String(formData.get("budget") ?? "").trim();
+  const projectType = readProjectType(formData.get("project_type"));
 
   const validStage = STAGE_OPTIONS.some((s) => s.value === stage);
   const validPriority = PRIORITY_OPTIONS.some((p) => p.value === priority);
+  const clientId = projectType === "client" ? String(formData.get("client_id") ?? "").trim() : "";
 
   return {
-    client_id: String(formData.get("client_id") ?? ""),
+    client_id: clientId || null,
+    project_type: projectType,
     name: String(formData.get("name") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim(),
     stage: (validStage ? stage : "incoming") as Enums<"project_stage">,
@@ -29,6 +33,8 @@ function readProjectFields(formData: FormData) {
 }
 
 const CREATE_TEAM = "__create__";
+const INTERNAL_SETUP_ERROR =
+  "Internal Products need a database update. Open the Supabase SQL editor and run supabase/migrations/0006_project_type.sql.";
 
 async function resolveAssignedTeamId(
   formData: FormData,
@@ -76,32 +82,45 @@ async function requireAdmin(redirectTo: string) {
   return profile!;
 }
 
+function saveErrorMessage(message: string, projectType: "client" | "internal") {
+  if (projectType === "internal") return INTERNAL_SETUP_ERROR;
+  if (/project_type|client_id/i.test(message)) return INTERNAL_SETUP_ERROR;
+  return message;
+}
+
 export async function createProjectRecord(formData: FormData) {
   await requireAdmin("/projects");
 
   const fields = readProjectFields(formData);
-  if (!fields.name || !fields.client_id) {
-    redirect(
-      `/projects/new?client=${fields.client_id}&error=` +
-        encodeURIComponent("Project name and client are required.")
-    );
+  if (!fields.name) {
+    redirect(`/projects/new?error=` + encodeURIComponent("Project name is required."));
+  }
+  if (fields.project_type === "client" && !fields.client_id) {
+    redirect(`/projects/new?error=` + encodeURIComponent("Choose a client for a Client Project."));
   }
 
   const supabase = await createClient();
   const profile = await getCurrentProfile();
   const assigned_team_id = await resolveAssignedTeamId(formData, profile!.id, "/projects/new");
-  const { data, error } = await supabase
-    .from("projects")
-    .insert({ ...fields, assigned_team_id, created_by: profile!.id })
-    .select("id")
-    .single();
+  const payload = { ...fields, assigned_team_id, created_by: profile!.id };
+
+  let { data, error } = await supabase.from("projects").insert(payload).select("id").single();
+
+  if (error && fields.project_type === "client") {
+    const { project_type: _projectType, ...withoutType } = payload;
+    const retry = await supabase.from("projects").insert(withoutType).select("id").single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error || !data) {
-    redirect(`/projects/new?client=${fields.client_id}&error=` + encodeURIComponent(error?.message ?? "Could not create project."));
+    redirect(
+      `/projects/new?error=` +
+        encodeURIComponent(saveErrorMessage(error?.message ?? "Could not create project.", fields.project_type))
+    );
   }
 
   revalidatePath("/projects");
-  revalidatePath("/board");
   revalidatePath("/teams");
   redirect(`/projects/${data.id}`);
 }
@@ -110,22 +129,34 @@ export async function updateProjectRecord(projectId: string, formData: FormData)
   await requireAdmin(`/projects/${projectId}`);
 
   const fields = readProjectFields(formData);
-  if (!fields.name || !fields.client_id) {
-    redirect(`/projects/${projectId}?error=` + encodeURIComponent("Project name and client are required."));
+  if (!fields.name) {
+    redirect(`/projects/${projectId}?error=` + encodeURIComponent("Project name is required."));
+  }
+  if (fields.project_type === "client" && !fields.client_id) {
+    redirect(`/projects/${projectId}?error=` + encodeURIComponent("Choose a client for a Client Project."));
   }
 
   const supabase = await createClient();
   const profile = await getCurrentProfile();
   const assigned_team_id = await resolveAssignedTeamId(formData, profile!.id, `/projects/${projectId}`);
-  const { error } = await supabase.from("projects").update({ ...fields, assigned_team_id }).eq("id", projectId);
+  const payload = { ...fields, assigned_team_id };
+
+  let { error } = await supabase.from("projects").update(payload).eq("id", projectId);
+
+  if (error && fields.project_type === "client") {
+    const { project_type: _projectType, ...withoutType } = payload;
+    const retry = await supabase.from("projects").update(withoutType).eq("id", projectId);
+    error = retry.error;
+  }
 
   if (error) {
-    redirect(`/projects/${projectId}?error=` + encodeURIComponent(error.message));
+    redirect(
+      `/projects/${projectId}?error=` + encodeURIComponent(saveErrorMessage(error.message, fields.project_type))
+    );
   }
 
   revalidatePath("/projects");
   revalidatePath(`/projects/${projectId}`);
-  revalidatePath("/board");
   revalidatePath("/teams");
   redirect(`/projects/${projectId}`);
 }
@@ -150,18 +181,18 @@ export async function addProjectLink(projectId: string, formData: FormData) {
   const label = String(formData.get("label") ?? "").trim();
   const url = String(formData.get("url") ?? "").trim();
   if (!label || !url) {
-    redirect(`/projects/${projectId}?error=` + encodeURIComponent("Link label and URL are both required."));
+    redirect(`/projects/${projectId}?tab=links&error=` + encodeURIComponent("Link label and URL are both required."));
   }
 
   const supabase = await createClient();
   const { error } = await supabase.from("project_links").insert({ project_id: projectId, label, url });
 
   if (error) {
-    redirect(`/projects/${projectId}?error=` + encodeURIComponent(error.message));
+    redirect(`/projects/${projectId}?tab=links&error=` + encodeURIComponent(error.message));
   }
 
   revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}`);
+  redirect(`/projects/${projectId}?tab=links`);
 }
 
 export async function deleteProjectLink(projectId: string, linkId: string) {
@@ -171,9 +202,9 @@ export async function deleteProjectLink(projectId: string, linkId: string) {
   const { error } = await supabase.from("project_links").delete().eq("id", linkId);
 
   if (error) {
-    redirect(`/projects/${projectId}?error=` + encodeURIComponent(error.message));
+    redirect(`/projects/${projectId}?tab=links&error=` + encodeURIComponent(error.message));
   }
 
   revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}`);
+  redirect(`/projects/${projectId}?tab=links`);
 }

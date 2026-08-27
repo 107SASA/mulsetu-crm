@@ -27,7 +27,6 @@ export async function moveProjectStage(projectId: string, newStage: string) {
     return { error: error.message };
   }
 
-  revalidatePath("/board");
   revalidatePath("/projects");
   revalidatePath(`/projects/${projectId}`);
   return { error: null };

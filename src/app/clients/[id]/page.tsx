@@ -36,7 +36,7 @@ export default async function ClientDetailPage({
   const deleteAction = deleteClientRecord.bind(null, id);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+    <div className="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-8">
       <Link href="/clients" className="text-sm text-zinc-500 hover:underline dark:text-zinc-400">
         ← All clients
       </Link>

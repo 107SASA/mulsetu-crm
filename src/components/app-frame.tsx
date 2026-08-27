@@ -3,20 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { isNavItemActive, type NavGroup } from "@/lib/nav";
+import { isNavItemActive, type NavItem } from "@/lib/nav";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { ProfileMenu } from "@/components/profile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandLogo } from "@/components/brand-logo";
 
 export function AppFrame({
-  groups,
+  items,
   fullName,
   email,
   role,
   children,
 }: {
-  groups: NavGroup[];
+  items: NavItem[];
   fullName: string;
   email: string;
   role: string;
@@ -37,7 +37,7 @@ export function AppFrame({
   }, [open]);
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex h-dvh overflow-hidden">
       {open && (
         <button
           type="button"
@@ -48,8 +48,8 @@ export function AppFrame({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[min(18.5rem,88vw)] flex-col border-r border-zinc-200 bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-zinc-700 transition-transform duration-200 lg:static lg:w-60 lg:translate-x-0 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 ${
-          open ? "translate-x-0 shadow-xl" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-[min(18.5rem,88vw)] flex-col border-r border-zinc-200 bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-zinc-700 transition-transform duration-200 lg:static lg:h-full lg:w-60 lg:shrink-0 lg:translate-x-0 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 ${
+          open ? "translate-x-0 shadow-xl" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="flex items-center justify-between gap-2 px-3 py-3 lg:px-4">
@@ -68,37 +68,28 @@ export function AppFrame({
           </button>
         </div>
 
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
-          {groups.map((group) => (
-            <div key={group.title}>
-              <p className="px-2.5 pb-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">
-                {group.title}
-              </p>
-              <div className="space-y-1">
-                {group.items.map((item) => {
-                  const active = isNavItemActive(item.href, pathname);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex min-h-11 items-center rounded-xl px-3 text-[15px] transition-colors lg:min-h-9 lg:text-sm ${
-                        active
-                          ? "bg-accent-50 font-medium text-accent-700 dark:bg-white/10 dark:text-white"
-                          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-zinc-100"
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-6">
+          {items.map((item) => {
+            const active = isNavItemActive(item.href, pathname);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex min-h-11 items-center rounded-xl px-3 text-[15px] transition-colors lg:min-h-9 lg:text-sm ${
+                  active
+                    ? "bg-accent-50 font-medium text-accent-700 dark:bg-white/10 dark:text-white"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-zinc-100"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-zinc-200 bg-white/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-md sm:gap-3 sm:px-4 dark:border-zinc-800 dark:bg-zinc-950/80">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="z-20 flex min-h-14 shrink-0 items-center gap-2 border-b border-zinc-200 bg-white/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-md sm:gap-3 sm:px-4 dark:border-zinc-800 dark:bg-zinc-950/80">
           <button
             type="button"
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-100 lg:hidden dark:text-zinc-300 dark:hover:bg-zinc-800"
@@ -117,7 +108,9 @@ export function AppFrame({
           <ThemeToggle />
           <ProfileMenu fullName={fullName} email={email} role={role} />
         </header>
-        <main className="flex flex-1 flex-col pb-[env(safe-area-inset-bottom)]">{children}</main>
+        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[env(safe-area-inset-bottom)]">
+          {children}
+        </main>
       </div>
     </div>
   );

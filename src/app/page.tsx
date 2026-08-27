@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
-import { StatTile } from "@/components/stat-tile";
 import { deadlineRisk } from "@/lib/project-risk";
-import { Avatar } from "@/components/ui/avatar";
-import { CARD } from "@/lib/card-styles";
+import { CARD, CARD_INTERACTIVE } from "@/lib/card-styles";
+import { Badge } from "@/components/ui/badge";
+import { DeadlineBadge } from "@/components/deadline-badge";
+import { TaskCard } from "@/components/task-card";
+import { stageLabel } from "@/lib/constants";
+import { projectSourceLabel, readProjectType } from "@/lib/project-work";
 
 export default async function Home({
   searchParams,
@@ -16,68 +19,70 @@ export default async function Home({
   if (!profile) return null;
   const isAdmin = profile.role === "admin";
   const firstName = profile.full_name.trim().split(/\s+/)[0] || null;
-
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
   const today = new Date().toISOString().slice(0, 10);
 
   const [
-    { count: activeProjects },
-    { count: completedThisMonth },
+    { data: activeProjects },
     { data: openProjectsForRisk },
-    { count: overdueTasksOrgWide },
-    { count: myOverdueTasks },
-    { count: myActiveTasks },
-    { data: workloadTasks },
-    { data: profiles },
+    { data: upcomingDeadlines },
+    { data: todayTasks },
+    { data: todaySchedule },
+    { data: overdueTasks },
   ] = await Promise.all([
     supabase
       .from("projects")
-      .select("id", { count: "exact", head: true })
-      .not("stage", "in", "(completed,on_hold_cancelled)"),
+      .select("id, name, stage, priority, deadline, client_id, client:clients(company_name)")
+      .not("stage", "in", "(completed,on_hold_cancelled)")
+      .order("deadline", { ascending: true, nullsFirst: false })
+      .limit(8),
     supabase
       .from("projects")
-      .select("id", { count: "exact", head: true })
-      .eq("stage", "completed")
-      .gte("updated_at", startOfMonth.toISOString()),
-    supabase
-      .from("projects")
-      .select("deadline, stage")
+      .select("id, name, stage, priority, deadline, client_id, client:clients(company_name)")
       .not("stage", "in", "(completed,on_hold_cancelled)")
       .not("deadline", "is", null),
-    isAdmin
-      ? supabase.from("tasks").select("id", { count: "exact", head: true }).lt("due_date", today).neq("status", "done")
-      : Promise.resolve({ count: null }),
+    supabase
+      .from("projects")
+      .select("id, name, stage, deadline, client_id, client:clients(company_name)")
+      .not("stage", "in", "(completed,on_hold_cancelled)")
+      .not("deadline", "is", null)
+      .gte("deadline", today)
+      .order("deadline")
+      .limit(6),
     supabase
       .from("tasks")
-      .select("id", { count: "exact", head: true })
+      .select("id, title, status, priority, due_date, project:projects(id, name)")
       .eq("assigned_to", profile.id)
-      .lt("due_date", today)
-      .neq("status", "done"),
+      .eq("due_date", today),
     supabase
-      .from("tasks")
-      .select("id", { count: "exact", head: true })
-      .eq("assigned_to", profile.id)
-      .neq("status", "done"),
+      .from("schedule_items")
+      .select("id, title, item_type, start_time")
+      .eq("developer_id", profile.id)
+      .eq("item_date", today)
+      .order("start_time"),
     isAdmin
-      ? supabase.from("tasks").select("assigned_to, status").neq("status", "done")
-      : Promise.resolve({ data: null }),
-    isAdmin ? supabase.from("profiles").select("id, full_name, email").order("full_name") : Promise.resolve({ data: null }),
+      ? supabase
+          .from("tasks")
+          .select("id, title, status, priority, due_date, project:projects(id, name)")
+          .lt("due_date", today)
+          .neq("status", "done")
+          .order("due_date")
+          .limit(8)
+      : supabase
+          .from("tasks")
+          .select("id, title, status, priority, due_date, project:projects(id, name)")
+          .eq("assigned_to", profile.id)
+          .lt("due_date", today)
+          .neq("status", "done")
+          .order("due_date")
+          .limit(8),
   ]);
 
-  const atRiskOrOverdueProjects = (openProjectsForRisk ?? []).filter(
-    (p) => deadlineRisk(p.deadline, p.stage) !== "none"
-  ).length;
-
-  const workloadByDeveloper = new Map<string, number>();
-  for (const t of workloadTasks ?? []) {
-    if (!t.assigned_to) continue;
-    workloadByDeveloper.set(t.assigned_to, (workloadByDeveloper.get(t.assigned_to) ?? 0) + 1);
-  }
+  const needsAttentionProjects = (openProjectsForRisk ?? []).filter(
+    (project) => deadlineRisk(project.deadline, project.stage) !== "none"
+  );
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
+    <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-5 sm:px-6 sm:py-8">
       {message && (
         <p className="mb-6 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
           {message}
@@ -86,91 +91,165 @@ export default async function Home({
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">Dashboard</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {firstName ? `Good to see you, ${firstName}` : "Overview"}
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-50">
+            {firstName ? `Good to see you, ${firstName}` : "Dashboard"}
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {isAdmin ? "A snapshot of the pipeline and the team." : "Your work for today and what’s open."}
+            What needs attention, and where to go next.
           </p>
         </div>
-        <div className="flex w-full flex-col gap-2 text-sm sm:w-auto sm:flex-row">
+        <div className="grid w-full grid-cols-3 gap-2 text-sm sm:flex sm:w-auto sm:flex-row">
+          <Link
+            href="/projects"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-accent-600 px-2 py-2 text-center font-medium text-white shadow-sm hover:bg-accent-700 sm:px-3.5"
+          >
+            Projects
+          </Link>
+          <Link
+            href="/tasks"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-200 bg-white px-2 py-2 text-center font-medium text-zinc-700 hover:bg-zinc-50 sm:px-3.5 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            Tasks
+          </Link>
           <Link
             href="/today"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-accent-600 px-3.5 py-2 font-medium text-white shadow-sm hover:bg-accent-700"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-200 bg-white px-2 py-2 text-center font-medium text-zinc-700 hover:bg-zinc-50 sm:px-3.5 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
           >
-            Today’s schedule
-          </Link>
-          <Link
-            href="/board"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-200 bg-white px-3.5 py-2 font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-          >
-            Pipeline
+            Today
           </Link>
         </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Active projects" value={activeProjects ?? 0} href="/projects" />
-        <StatTile label="Completed this month" value={completedThisMonth ?? 0} href="/board" />
-        <StatTile
-          label="Projects at risk"
-          value={atRiskOrOverdueProjects}
-          tone={atRiskOrOverdueProjects > 0 ? "danger" : "default"}
-          href="/deadlines"
-        />
-        {isAdmin ? (
-          <StatTile
-            label="Overdue tasks"
-            value={overdueTasksOrgWide ?? 0}
-            tone={(overdueTasksOrgWide ?? 0) > 0 ? "danger" : "default"}
-            href="/tasks/team"
-          />
-        ) : (
-          <StatTile
-            label="Your overdue tasks"
-            value={myOverdueTasks ?? 0}
-            tone={(myOverdueTasks ?? 0) > 0 ? "danger" : "default"}
-            href="/tasks"
-          />
-        )}
-      </div>
-
-      {!isAdmin && (
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label="Your open tasks" value={myActiveTasks ?? 0} href="/tasks" />
-        </div>
-      )}
-
-      {isAdmin && profiles && profiles.length > 0 && (
-        <section className="mt-10">
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Team workload</h2>
-            <Link href="/tasks/team" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
-              View team tasks
+            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Needs attention</h2>
+            <Link href="/projects" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+              All projects
             </Link>
           </div>
-          <div className={`${CARD} overflow-hidden`}>
-            <table className="min-w-full divide-y divide-zinc-100 dark:divide-zinc-800">
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {profiles.map((p) => (
-                  <tr key={p.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40">
-                    <td className="px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar name={p.full_name || p.email} size="sm" />
-                        {p.full_name || p.email}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right text-sm text-zinc-500 dark:text-zinc-400">
-                      {workloadByDeveloper.get(p.id) ?? 0} open
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {needsAttentionProjects.length === 0 && (!overdueTasks || overdueTasks.length === 0) ? (
+            <p className={`${CARD} p-4 text-sm text-zinc-500 dark:text-zinc-400`}>Nothing overdue or at risk.</p>
+          ) : (
+            <div className="space-y-2">
+              {needsAttentionProjects.slice(0, 6).map((project) => {
+                const type = readProjectType(undefined, project.client_id);
+                return (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className={`${CARD_INTERACTIVE} flex items-center justify-between gap-3 p-3`}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{project.name}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {projectSourceLabel(type, project.client?.company_name)}
+                      </p>
+                    </div>
+                    <DeadlineBadge deadline={project.deadline} stage={project.stage} />
+                  </Link>
+                );
+              })}
+              {(overdueTasks ?? []).slice(0, 4).map((task) => (
+                <TaskCard key={task.id} task={task} canEditStatus />
+              ))}
+            </div>
+          )}
         </section>
-      )}
+
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Today’s workload</h2>
+            <Link href="/today" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+              Open Today
+            </Link>
+          </div>
+          {(!todaySchedule || todaySchedule.length === 0) && (!todayTasks || todayTasks.length === 0) ? (
+            <p className={`${CARD} p-4 text-sm text-zinc-500 dark:text-zinc-400`}>No tasks or meetings on your calendar today.</p>
+          ) : (
+            <div className="space-y-2">
+              {(todaySchedule ?? []).map((item) => (
+                <div key={item.id} className={`${CARD} p-3 text-sm`}>
+                  <p className="font-medium text-zinc-900 dark:text-zinc-50">{item.title}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {item.item_type} · {item.start_time.slice(0, 5)}
+                  </p>
+                </div>
+              ))}
+              {(todayTasks ?? []).map((task) => (
+                <TaskCard key={task.id} task={task} canEditStatus />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Active projects</h2>
+            <Link
+              href="/projects?view=pipeline"
+              className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500"
+            >
+              Pipeline
+            </Link>
+          </div>
+          {!activeProjects || activeProjects.length === 0 ? (
+            <p className={`${CARD} p-4 text-sm text-zinc-500 dark:text-zinc-400`}>No active projects.</p>
+          ) : (
+            <ul className="space-y-2">
+              {activeProjects.map((project) => {
+                const type = readProjectType(undefined, project.client_id);
+                return (
+                  <li key={project.id}>
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className={`${CARD_INTERACTIVE} flex items-center justify-between gap-3 p-3`}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{project.name}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {projectSourceLabel(type, project.client?.company_name)}
+                        </p>
+                      </div>
+                      <Badge tone="bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                        {stageLabel(project.stage)}
+                      </Badge>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Upcoming deadlines</h2>
+            <Link href="/projects" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+              View projects
+            </Link>
+          </div>
+          {!upcomingDeadlines || upcomingDeadlines.length === 0 ? (
+            <p className={`${CARD} p-4 text-sm text-zinc-500 dark:text-zinc-400`}>No upcoming deadlines.</p>
+          ) : (
+            <ul className="space-y-2">
+              {upcomingDeadlines.map((project) => (
+                <li key={project.id}>
+                  <Link
+                    href={`/projects/${project.id}`}
+                    className={`${CARD_INTERACTIVE} flex items-center justify-between gap-3 p-3`}
+                  >
+                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{project.name}</p>
+                    <DeadlineBadge deadline={project.deadline} stage={project.stage} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

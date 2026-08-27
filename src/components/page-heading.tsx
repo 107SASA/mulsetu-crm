@@ -20,7 +20,7 @@ export function PageHeading({
         </h1>
         {description && <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">{actions}</div>}
     </div>
   );
 }

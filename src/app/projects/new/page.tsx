@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
@@ -6,6 +5,7 @@ import { createProjectRecord } from "../actions";
 import { ProjectForm } from "../project-form";
 import { CARD } from "@/lib/card-styles";
 import { fetchAssignmentTeams } from "@/lib/teams";
+import { PageHeading } from "@/components/page-heading";
 
 export default async function NewProjectPage({
   searchParams,
@@ -25,31 +25,22 @@ export default async function NewProjectPage({
     fetchAssignmentTeams(supabase),
   ]);
 
-  if (!clients || clients.length === 0) {
-    return (
-      <div className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">New project</h1>
-        <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-          You need at least one client before you can create a project.{" "}
-          <Link href="/clients/new" className="font-medium text-accent-600 underline dark:text-accent-500">
-            Add a client first
-          </Link>
-          .
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6">
-      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">New project</h1>
+    <div className="mx-auto w-full max-w-xl px-4 py-5 sm:px-6 sm:py-8">
+      <PageHeading
+        title="New project"
+        description="Client work or an internal product — both live in Projects."
+      />
       <div className={`${CARD} mt-6 p-5`}>
         <ProjectForm
           action={createProjectRecord}
-          clients={clients}
+          clients={clients ?? []}
           developers={developers ?? []}
           teams={teams}
-          defaults={{ client_id: client }}
+          defaults={{
+            client_id: client,
+            project_type: client ? "client" : clients && clients.length > 0 ? "client" : "internal",
+          }}
           error={error}
           submitLabel="Create project"
           showBudget

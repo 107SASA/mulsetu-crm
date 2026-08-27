@@ -10,63 +10,112 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CARD_INTERACTIVE } from "@/lib/card-styles";
 import { readAssignedTeam } from "@/lib/teams";
 import { PageHeading } from "@/components/page-heading";
+import { ViewTabs } from "@/components/view-tabs";
+import { PipelineBoard, type BoardProject } from "@/app/board/pipeline-board";
+import { PROJECT_TYPE_OPTIONS, projectSourceLabel, readProjectType } from "@/lib/project-work";
 
 const FILTER_SELECT =
-  "rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/30 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100";
+  "min-h-11 w-full max-w-full rounded-lg border border-zinc-300 px-3 py-2 text-base text-zinc-900 shadow-sm focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/30 sm:min-h-0 sm:w-auto sm:py-1.5 sm:text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100";
+
+function projectsHref(params: {
+  view?: string;
+  client?: string;
+  stage?: string;
+  type?: string;
+}) {
+  const search = new URLSearchParams();
+  if (params.view === "pipeline") search.set("view", "pipeline");
+  if (params.client) search.set("client", params.client);
+  if (params.stage) search.set("stage", params.stage);
+  if (params.type === "client" || params.type === "internal") search.set("type", params.type);
+  const query = search.toString();
+  return query ? `/projects?${query}` : "/projects";
+}
 
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string; stage?: string; error?: string }>;
+  searchParams: Promise<{ client?: string; stage?: string; type?: string; view?: string; error?: string }>;
 }) {
-  const { client: clientFilter, stage: stageFilter, error } = await searchParams;
+  const { client: clientFilter, stage: stageFilter, type: typeFilter, view, error } = await searchParams;
   const [profile, supabase] = await Promise.all([getCurrentProfile(), createClient()]);
   const isAdmin = profile?.role === "admin";
+  const isPipeline = view === "pipeline";
 
   const { data: clients } = await supabase.from("clients").select("id, company_name").order("company_name");
 
   const selectWithTeam =
-    "id, name, stage, priority, deadline, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email), team:teams!projects_assigned_team_id_fkey(id, name)";
+    "id, name, stage, priority, deadline, client_id, project_type, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email), team:teams!projects_assigned_team_id_fkey(id, name)";
   const selectWithoutTeam =
-    "id, name, stage, priority, deadline, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email)";
-
-  let query = supabase.from("projects").select(selectWithTeam).order("deadline", { ascending: true, nullsFirst: false });
+    "id, name, stage, priority, deadline, client_id, project_type, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email)";
+  const selectFallback =
+    "id, name, stage, priority, deadline, client_id, client:clients(id, company_name), assignee:profiles!projects_assigned_to_fkey(full_name, email)";
 
   const validStage = STAGE_OPTIONS.find((s) => s.value === stageFilter)?.value;
+  const validType = PROJECT_TYPE_OPTIONS.find((option) => option.value === typeFilter)?.value;
 
-  if (clientFilter) query = query.eq("client_id", clientFilter);
-  if (validStage) query = query.eq("stage", validStage);
+  const withTeamQuery = supabase
+    .from("projects")
+    .select(selectWithTeam)
+    .order("deadline", { ascending: true, nullsFirst: false });
+  const withoutTeamQuery = supabase
+    .from("projects")
+    .select(selectWithoutTeam)
+    .order("deadline", { ascending: true, nullsFirst: false });
+  const fallbackQuery = supabase
+    .from("projects")
+    .select(selectFallback)
+    .order("deadline", { ascending: true, nullsFirst: false });
 
-  const { data: firstPass, error: projectsError } = await query;
-  const retry = projectsError
-    ? await (() => {
-        let fallback = supabase
-          .from("projects")
-          .select(selectWithoutTeam)
-          .order("deadline", { ascending: true, nullsFirst: false });
-        if (clientFilter) fallback = fallback.eq("client_id", clientFilter);
-        if (validStage) fallback = fallback.eq("stage", validStage);
-        return fallback;
-      })()
-    : null;
+  function withFilters<T extends { eq: (column: string, value: string) => T }>(query: T, includeType: boolean) {
+    let next = query;
+    if (clientFilter) next = next.eq("client_id", clientFilter);
+    if (validStage) next = next.eq("stage", validStage);
+    if (includeType && validType) next = next.eq("project_type", validType);
+    return next;
+  }
 
-  const projects = ((retry?.data ?? firstPass) ?? []).map((project) => ({
-    ...project,
-    team: readAssignedTeam((project as { team?: unknown }).team),
-  }));
+  const { data: firstPass, error: projectsError } = await withFilters(withTeamQuery, true);
+  const secondPass = projectsError ? await withFilters(withoutTeamQuery, true) : null;
+  const thirdPass = secondPass?.error ? await withFilters(fallbackQuery, false) : null;
+
+  const projects = ((thirdPass?.data ?? secondPass?.data ?? firstPass) ?? []).map((project) => {
+    const type = readProjectType(
+      "project_type" in project ? project.project_type : undefined,
+      project.client_id
+    );
+    return {
+      ...project,
+      project_type: type,
+      team: readAssignedTeam((project as { team?: unknown }).team),
+    };
+  });
+
+  const filterState = { client: clientFilter, stage: stageFilter, type: typeFilter };
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <div className={`mx-auto w-full min-w-0 px-4 py-5 sm:px-6 sm:py-8 ${isPipeline ? "max-w-7xl" : "max-w-6xl"}`}>
       <PageHeading
-        kicker="Records"
         title="Projects"
-        description="Filter by client or stage, then open a project for details."
+        description="All work — client projects and internal products."
         actions={
-          isAdmin ? (
-            <ButtonLink href="/projects/new" variant="primary" size="sm">
-              New project
-            </ButtonLink>
-          ) : undefined
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+            <ViewTabs
+              items={[
+                { href: projectsHref(filterState), label: "List", active: !isPipeline },
+                {
+                  href: projectsHref({ ...filterState, view: "pipeline" }),
+                  label: "Pipeline",
+                  active: isPipeline,
+                },
+              ]}
+            />
+            {isAdmin ? (
+              <ButtonLink href="/projects/new" variant="primary" size="sm" className="w-full sm:w-auto">
+                New project
+              </ButtonLink>
+            ) : null}
+          </div>
         }
       />
 
@@ -76,13 +125,21 @@ export default async function ProjectsPage({
         </p>
       )}
 
-      {/* Filters — plain GET form, no client JS needed */}
       <form className="mt-4 flex flex-wrap items-center gap-3 text-sm" method="get">
+        {isPipeline && <input type="hidden" name="view" value="pipeline" />}
         <select name="client" defaultValue={clientFilter ?? ""} className={FILTER_SELECT}>
           <option value="">All clients</option>
           {clients?.map((c) => (
             <option key={c.id} value={c.id}>
               {c.company_name}
+            </option>
+          ))}
+        </select>
+        <select name="type" defaultValue={validType ?? ""} className={FILTER_SELECT}>
+          <option value="">All types</option>
+          {PROJECT_TYPE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
@@ -97,14 +154,22 @@ export default async function ProjectsPage({
         <Button type="submit" variant="secondary" size="sm">
           Filter
         </Button>
-        {(clientFilter || stageFilter) && (
-          <Link href="/projects" className="self-center text-zinc-500 underline hover:text-accent-600 dark:text-zinc-400">
+        {(clientFilter || stageFilter || validType) && (
+          <Link
+            href={isPipeline ? "/projects?view=pipeline" : "/projects"}
+            className="self-center text-zinc-500 underline hover:text-accent-600 dark:text-zinc-400"
+          >
             Clear
           </Link>
         )}
       </form>
 
-      {!projects || projects.length === 0 ? (
+      {isPipeline ? (
+        <PipelineBoard
+          projects={projects as BoardProject[]}
+          isAdmin={Boolean(isAdmin)}
+        />
+      ) : !projects || projects.length === 0 ? (
         <EmptyState icon="📁" title="No projects match these filters." />
       ) : (
         <ul className="mt-6 space-y-3">
@@ -114,10 +179,10 @@ export default async function ProjectsPage({
                 href={`/projects/${p.id}`}
                 className={`${CARD_INTERACTIVE} flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between`}
               >
-                <div>
-                  <p className="font-medium text-zinc-900 dark:text-zinc-50">{p.name}</p>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {p.client?.company_name}
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">{p.name}</p>
+                  <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
+                    {projectSourceLabel(p.project_type, p.client?.company_name)}
                     {p.assignee && ` · ${p.assignee.full_name || p.assignee.email}`}
                     {p.team && ` · Team: ${p.team.name}`}
                   </p>

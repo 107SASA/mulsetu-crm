@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { TaskCard } from "@/components/task-card";
@@ -8,6 +7,7 @@ import { CARD } from "@/lib/card-styles";
 import { FIELD, FIELD_INLINE, FIELD_LABEL_SM } from "@/lib/field-styles";
 import { createScheduleItem, deleteScheduleItem } from "./actions";
 import { PageHeading } from "@/components/page-heading";
+import { TodayFilters } from "./today-filters";
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -59,13 +59,13 @@ export default async function TodayPage({
 
   const returnTo = `/today?date=${date}${viewingDeveloperId !== profile.id ? `&developer=${viewingDeveloperId}` : ""}`;
   const canManage = isAdmin || viewingDeveloperId === profile.id;
+  const isOwnDay = viewingDeveloperId === profile.id;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+    <div className="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-8">
       <PageHeading
-        kicker="Work"
-        title={viewingDeveloperId === profile.id ? "Today" : `${viewingProfile?.full_name || viewingProfile?.email}'s day`}
-        description="Schedule and tasks due on the selected date."
+        title={isOwnDay ? "Today" : `${viewingProfile?.full_name || viewingProfile?.email}'s day`}
+        description="Tasks and meetings for the selected date."
       />
 
       {error && (
@@ -74,47 +74,26 @@ export default async function TodayPage({
         </p>
       )}
 
-      <form className="mt-4 flex flex-wrap items-end gap-3 text-sm" method="get">
-        <div>
-          <label htmlFor="date" className={FIELD_LABEL_SM}>
-            Date
-          </label>
-          <input id="date" name="date" type="date" defaultValue={date} className={`mt-1 ${FIELD_INLINE}`} />
-        </div>
-        {isAdmin && developers && (
-          <div>
-            <label htmlFor="developer" className={FIELD_LABEL_SM}>
-              Developer
-            </label>
-            <select id="developer" name="developer" defaultValue={viewingDeveloperId} className={`mt-1 ${FIELD_INLINE}`}>
-              {developers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.full_name || d.email}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        <Button type="submit" variant="secondary">
-          Show this day
-        </Button>
-        <Link href="/today" className="self-center text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
-          Jump to today
-        </Link>
-      </form>
+      <TodayFilters
+        date={date}
+        developerId={viewingDeveloperId}
+        currentUserId={profile.id}
+        developers={developers}
+        isAdmin={isAdmin}
+      />
 
       <section className="mt-6">
-        <h2 className="mb-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">Schedule</h2>
+        <h2 className="mb-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">Meetings & calls</h2>
         {!scheduleItems || scheduleItems.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing scheduled.</p>
         ) : (
           <ul className="space-y-2">
             {scheduleItems.map((item) => (
-              <li key={item.id} className={`${CARD} flex items-center justify-between p-3 text-sm`}>
-                <div className="flex items-start gap-2.5">
+              <li key={item.id} className={`${CARD} flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between`}>
+                <div className="flex min-w-0 items-start gap-2.5">
                   <span className="text-base leading-none">{TYPE_ICON[item.item_type] ?? "📌"}</span>
-                  <div>
-                    <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                  <div className="min-w-0">
+                    <p className="font-medium break-words text-zinc-900 dark:text-zinc-50">
                       {formatTime(item.start_time)}
                       {item.end_time ? ` – ${formatTime(item.end_time)}` : ""} · {item.title}
                     </p>
@@ -125,7 +104,7 @@ export default async function TodayPage({
                   </div>
                 </div>
                 {canManage && (
-                  <form action={deleteScheduleItem.bind(null, returnTo, item.id)}>
+                  <form action={deleteScheduleItem.bind(null, returnTo, item.id)} className="shrink-0 self-end sm:self-center">
                     <button type="submit" className="text-xs text-red-600 hover:underline dark:text-red-400">
                       Remove
                     </button>
@@ -144,13 +123,13 @@ export default async function TodayPage({
             <input type="hidden" name="developer_id" value={viewingDeveloperId} />
             <input type="hidden" name="item_date" value={date} />
 
-            <div className="flex-1 sm:min-w-[10rem]">
+            <div className="min-w-0 flex-1 sm:min-w-[10rem]">
               <label htmlFor="title" className={FIELD_LABEL_SM}>
                 Title
               </label>
               <input id="title" name="title" required placeholder="Client X call" className={`mt-1 ${FIELD}`} />
             </div>
-            <div>
+            <div className="w-full min-w-0 sm:w-auto">
               <label htmlFor="item_type" className={FIELD_LABEL_SM}>
                 Type
               </label>
@@ -160,19 +139,19 @@ export default async function TodayPage({
                 <option value="other">Other</option>
               </select>
             </div>
-            <div>
+            <div className="w-full min-w-0 sm:w-auto">
               <label htmlFor="start_time" className={FIELD_LABEL_SM}>
                 Start
               </label>
               <input id="start_time" name="start_time" type="time" required className={`mt-1 ${FIELD_INLINE}`} />
             </div>
-            <div>
+            <div className="w-full min-w-0 sm:w-auto">
               <label htmlFor="end_time" className={FIELD_LABEL_SM}>
                 End (optional)
               </label>
               <input id="end_time" name="end_time" type="time" className={`mt-1 ${FIELD_INLINE}`} />
             </div>
-            <div>
+            <div className="w-full min-w-0 sm:w-auto">
               <label htmlFor="project_id" className={FIELD_LABEL_SM}>
                 Project (optional)
               </label>
@@ -185,15 +164,15 @@ export default async function TodayPage({
                 ))}
               </select>
             </div>
-            <Button type="submit" variant="primary">
-              + Add to schedule
+            <Button type="submit" variant="primary" className="w-full sm:w-auto">
+              + Add
             </Button>
           </form>
         )}
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">Tasks due today</h2>
+        <h2 className="mb-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">Tasks</h2>
         {!dueTasks || dueTasks.length === 0 ? (
           <EmptyState icon="✅" title="No tasks due on this date." />
         ) : (
