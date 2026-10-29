@@ -46,6 +46,20 @@ body {
   color: var(--accent-700);
 }
 
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.toast-in {
+  animation: toast-in 180ms ease-out;
+}
+
 /* Slim, unobtrusive scrollbar for horizontally-scrolling regions (board, tables) */
 .scroll-thin {
   scrollbar-width: thin;

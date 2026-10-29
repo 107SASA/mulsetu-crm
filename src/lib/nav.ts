@@ -3,17 +3,19 @@ export type NavItem = { href: string; label: string };
 export function getNavItems(): NavItem[] {
   return [
     { href: "/", label: "Dashboard" },
+    { href: "/leads", label: "Leads" },
     { href: "/projects", label: "Projects" },
-    { href: "/tasks", label: "Tasks" },
-    { href: "/today", label: "Today" },
+    { href: "/tasks", label: "My Work" },
     { href: "/clients", label: "Clients" },
     { href: "/teams", label: "Team" },
   ];
 }
 
 const SEGMENT_LABELS: Record<string, string> = {
-  today: "Today",
-  tasks: "Tasks",
+  today: "My Work",
+  leads: "Leads",
+  tasks: "My Work",
+  edit: "Edit",
   team: "Team",
   board: "Pipeline",
   deadlines: "Deadlines",

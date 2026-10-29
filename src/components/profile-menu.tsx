@@ -1,9 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
 import { Avatar } from "@/components/ui/avatar";
+import { Spinner } from "@/components/ui/spinner";
+
+function SignOutButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      role="menuitem"
+      disabled={pending}
+      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-60 dark:text-zinc-300 dark:hover:bg-zinc-800"
+    >
+      {pending && <Spinner className="h-3.5 w-3.5" />}
+      {pending ? "Signing out…" : "Sign out"}
+    </button>
+  );
+}
 
 export function ProfileMenu({
   fullName,
@@ -70,13 +87,7 @@ export function ProfileMenu({
             Change password
           </Link>
           <form action={signOut}>
-            <button
-              type="submit"
-              role="menuitem"
-              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >
-              Sign out
-            </button>
+            <SignOutButton />
           </form>
         </div>
       )}

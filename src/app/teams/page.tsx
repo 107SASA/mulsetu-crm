@@ -3,9 +3,10 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { createTeam, deleteTeam } from "./actions";
 import { DeleteButton } from "@/components/delete-button";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { CARD } from "@/lib/card-styles";
-import { FIELD, FIELD_LABEL } from "@/lib/field-styles";
+import { FieldLabel, FormError, TextField } from "@/components/form/fields";
+import { PeoplePicker } from "@/components/form/people-picker";
 import { PageHeading } from "@/components/page-heading";
 import Link from "next/link";
 
@@ -14,12 +15,10 @@ export default async function TeamsPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { error } = await searchParams;
-  const profile = await getCurrentProfile();
+  const [{ error }, profile, supabase] = await Promise.all([searchParams, getCurrentProfile(), createClient()]);
   if (!profile) return null;
   const isAdmin = profile.role === "admin";
 
-  const supabase = await createClient();
   const [{ data: teams, error: teamsError }, { data: developers }, { data: assignedProjects }] = await Promise.all([
     supabase
       .from("teams")
@@ -57,33 +56,27 @@ export default async function TeamsPage({
       />
 
       {error && (
-        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>
+        <div className="mt-4">
+          <FormError message={error} />
+        </div>
       )}
 
       {isAdmin && (
         <section className={`${CARD} mt-6 p-5`}>
-          <h2 className="mb-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">Create a team</h2>
+          <h2 className="mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Create a team</h2>
           <form action={createTeam} className="space-y-4">
+            <TextField label="Team name" name="name" required placeholder="e.g. Frontend squad" />
             <div>
-              <label htmlFor="name" className={FIELD_LABEL}>
-                Team name
-              </label>
-              <input id="name" name="name" required placeholder="Frontend squad" className={`mt-1 ${FIELD}`} />
-            </div>
-            <fieldset>
-              <legend className={FIELD_LABEL}>Members</legend>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {(developers ?? []).map((developer) => (
-                  <label key={developer.id} className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-                    <input type="checkbox" name="members" value={developer.id} className="rounded border-zinc-300" />
-                    {developer.full_name || developer.email}
-                  </label>
-                ))}
+              <FieldLabel>Members</FieldLabel>
+              <div className="mt-2">
+                <PeoplePicker people={developers ?? []} name="members" />
               </div>
-            </fieldset>
-            <Button type="submit" variant="primary">
-              Create team
-            </Button>
+            </div>
+            <div className="flex justify-end">
+              <SubmitButton pendingLabel="Creating…" className="w-full sm:w-auto">
+                Create team
+              </SubmitButton>
+            </div>
           </form>
         </section>
       )}
@@ -140,6 +133,7 @@ export default async function TeamsPage({
                       action={deleteTeam.bind(null, team.id)}
                       confirmMessage={`Delete team "${team.name}"?`}
                       label="Delete team"
+                      className="shrink-0"
                     />
                   )}
                 </div>

@@ -3,7 +3,7 @@
 import { useOptimistic, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { STAGE_OPTIONS, priorityColor, priorityLabel } from "@/lib/constants";
+import { STAGE_OPTIONS, priorityColor, priorityLabel, stageDotColor } from "@/lib/constants";
 import { DeadlineBadge } from "@/components/deadline-badge";
 import { deadlineRisk } from "@/lib/project-risk";
 import { Badge } from "@/components/ui/badge";
@@ -23,10 +23,10 @@ export type BoardProject = {
   team: { id: string; name: string } | null;
 };
 
-const RISK_BORDER: Record<string, string> = {
-  overdue: "border-l-4 border-l-red-500",
-  at_risk: "border-l-4 border-l-amber-500",
-  none: "border-l-4 border-l-transparent",
+const RISK_RING: Record<string, string> = {
+  overdue: "ring-1 ring-red-300 dark:ring-red-900",
+  at_risk: "ring-1 ring-amber-300 dark:ring-amber-900",
+  none: "",
 };
 
 export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[]; isAdmin: boolean }) {
@@ -50,23 +50,20 @@ export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[];
       setOptimistic({ id: projectId, stage: newStage });
       setError(null);
       const result = await moveProjectStage(projectId, newStage);
-      if (result?.error) setError(result.error);
-      router.refresh();
+      if (result?.error) {
+        setError(result.error);
+        router.refresh();
+      }
     });
   }
 
   return (
     <>
-      {isAdmin && (
-        <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
-          Drag a card to a column, or pick a stage from the dropdown.
-        </p>
-      )}
       {error && (
-        <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>
+        <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>
       )}
 
-      <div className="scroll-thin -mx-4 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-6 sm:mx-0 sm:gap-4 sm:px-0 sm:pb-4">
+      <div className="scroll-thin -mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-6 sm:mx-0 sm:px-0 sm:pb-4">
         {STAGE_OPTIONS.map((stage) => {
           const stageProjects = optimisticProjects.filter((project) => project.stage === stage.value);
           const isOver = overStage === stage.value;
@@ -74,7 +71,9 @@ export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[];
           return (
             <section
               key={stage.value}
-              className={`w-[min(80vw,18rem)] shrink-0 snap-start rounded-xl sm:w-72 ${isOver ? "bg-accent-50/60 dark:bg-accent-100/5" : ""}`}
+              className={`flex w-[min(80vw,17rem)] shrink-0 snap-start flex-col rounded-2xl p-2 transition-colors sm:w-60 ${
+                isOver ? "bg-accent-50 ring-2 ring-accent-500/40 dark:bg-accent-100/10" : "bg-zinc-200/50 dark:bg-zinc-900/70"
+              }`}
               onDragOver={(event) => {
                 if (!isAdmin) return;
                 event.preventDefault();
@@ -93,23 +92,23 @@ export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[];
                 setDraggingId(null);
               }}
             >
-              <h2 className="mb-2 flex items-center justify-between text-sm font-medium text-zinc-600 dark:text-zinc-400">
+              <h2 className="flex items-center gap-2 px-2 pb-2 pt-1 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                <span className={`h-2 w-2 rounded-full ${stageDotColor(stage.value)}`} aria-hidden />
                 {stage.label}
-                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  {stageProjects.length}
-                </span>
+                <span className="ml-auto text-xs font-medium text-zinc-400">{stageProjects.length}</span>
               </h2>
 
-              <div className={`min-h-24 space-y-2 rounded-xl p-0.5 ${isOver ? "ring-2 ring-accent-500/40" : ""}`}>
+              <div className="min-h-20 flex-1 space-y-2">
                 {stageProjects.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-zinc-200 p-3 text-xs text-zinc-400 dark:border-zinc-800">
-                    {isAdmin ? "Drop a project here" : "No projects"}
+                  <p className="rounded-xl border border-dashed border-zinc-300 px-3 py-6 text-center text-xs text-zinc-400 dark:border-zinc-700">
+                    {isAdmin ? "Drop here" : "Empty"}
                   </p>
                 ) : (
                   stageProjects.map((project) => {
                     const risk = deadlineRisk(project.deadline, project.stage);
+                    const showPriority = project.priority === "high" || project.priority === "urgent";
                     return (
-                      <div
+                      <article
                         key={project.id}
                         draggable={isAdmin}
                         onDragStart={(event) => {
@@ -126,9 +125,9 @@ export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[];
                             skipClickRef.current = false;
                           });
                         }}
-                        className={`rounded-xl border border-zinc-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 ${RISK_BORDER[risk]} ${
+                        className={`rounded-xl border border-zinc-200 bg-white p-3 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 ${RISK_RING[risk]} ${
                           isAdmin ? "cursor-grab active:cursor-grabbing" : ""
-                        } ${draggingId === project.id ? "opacity-50" : ""}`}
+                        } ${draggingId === project.id ? "rotate-1 opacity-50" : ""}`}
                       >
                         <Link
                           href={`/projects/${project.id}`}
@@ -137,37 +136,32 @@ export function PipelineBoard({ projects, isAdmin }: { projects: BoardProject[];
                             if (skipClickRef.current) event.preventDefault();
                           }}
                         >
-                          <p className="text-sm font-medium text-zinc-900 hover:text-accent-600 dark:text-zinc-50 dark:hover:text-accent-500">
+                          <p className="text-sm font-medium leading-snug text-zinc-900 hover:text-accent-600 dark:text-zinc-50 dark:hover:text-accent-500">
                             {project.name}
                           </p>
-                          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                          <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
                             {project.client?.company_name || "Internal product"}
                           </p>
                         </Link>
 
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                          <Badge tone={priorityColor(project.priority)}>{priorityLabel(project.priority)}</Badge>
-                          <DeadlineBadge deadline={project.deadline} stage={project.stage} />
+                        <div className="mt-3 flex items-center gap-2 text-xs">
+                          {showPriority && <Badge tone={priorityColor(project.priority)}>{priorityLabel(project.priority)}</Badge>}
+                          <span className="min-w-0 truncate">
+                            <DeadlineBadge deadline={project.deadline} stage={project.stage} />
+                          </span>
+                          {project.assignee && (
+                            <span className="ml-auto" title={project.assignee.full_name || project.assignee.email}>
+                              <Avatar name={project.assignee.full_name || project.assignee.email} size="sm" />
+                            </span>
+                          )}
                         </div>
 
-                        {(project.assignee || project.team) && (
-                          <div className="mt-2 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
-                            {project.assignee && (
-                              <div className="flex items-center gap-1.5">
-                                <Avatar name={project.assignee.full_name || project.assignee.email} size="sm" />
-                                {project.assignee.full_name || project.assignee.email}
-                              </div>
-                            )}
-                            {project.team && <p>Team: {project.team.name}</p>}
-                          </div>
-                        )}
-
                         {isAdmin && (
-                          <div className="mt-2">
-                            <StageSelect projectId={project.id} currentStage={project.stage} />
+                          <div className="mt-2 border-t border-zinc-100 pt-2 dark:border-zinc-800">
+                            <StageSelect currentStage={project.stage} onMove={(next) => moveToStage(project.id, next)} />
                           </div>
                         )}
-                      </div>
+                      </article>
                     );
                   })
                 )}

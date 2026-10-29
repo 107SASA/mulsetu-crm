@@ -25,9 +25,10 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims refreshes the session cookie when needed and verifies the JWT
+  // locally, so most requests skip a round-trip to Supabase Auth.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ?? null;
 
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = pathname.startsWith("/login");

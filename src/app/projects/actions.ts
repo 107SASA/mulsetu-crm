@@ -7,6 +7,18 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import type { Enums } from "@/lib/supabase/database.types";
 import { STAGE_OPTIONS, PRIORITY_OPTIONS } from "@/lib/constants";
 import { readProjectType } from "@/lib/project-work";
+import { clientSelectionError, resolveClientId } from "@/lib/clients";
+import { withNotice, withParam } from "@/lib/flash";
+
+const CREATE_TEAM = "__create__";
+const INTERNAL_SETUP_ERROR =
+  "Internal Products need a database update. Open the Supabase SQL editor and run supabase/migrations/0006_project_type.sql.";
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+function fail(path: string, message: string): never {
+  redirect(withParam(path, "error", message));
+}
 
 function readProjectFields(formData: FormData) {
   const stage = String(formData.get("stage") ?? "incoming");
@@ -32,43 +44,46 @@ function readProjectFields(formData: FormData) {
   };
 }
 
-const CREATE_TEAM = "__create__";
-const INTERNAL_SETUP_ERROR =
-  "Internal Products need a database update. Open the Supabase SQL editor and run supabase/migrations/0006_project_type.sql.";
+// Checks the form before anything is written, so a bad submission never
+// leaves behind a half-created client or team.
+function validateProjectFields(fields: ReturnType<typeof readProjectFields>, formData: FormData, errorPath: string) {
+  if (!fields.name) fail(errorPath, "Project name is required.");
+  if (fields.project_type === "client") {
+    const clientError = clientSelectionError(formData);
+    if (clientError) fail(errorPath, clientError);
+  }
+  if (String(formData.get("assigned_team_id") ?? "") === CREATE_TEAM && !String(formData.get("new_team_name") ?? "").trim()) {
+    fail(errorPath, "Enter a name for the new team.");
+  }
+  if (fields.start_date && fields.deadline && fields.deadline < fields.start_date) {
+    fail(errorPath, "The deadline can't be before the start date.");
+  }
+  if (fields.budget != null && (Number.isNaN(fields.budget) || fields.budget < 0)) {
+    fail(errorPath, "Budget must be a positive number.");
+  }
+}
 
-async function resolveAssignedTeamId(
-  formData: FormData,
-  createdBy: string,
-  errorRedirect: string
-) {
+async function resolveAssignedTeamId(supabase: Supabase, formData: FormData, createdBy: string, errorPath: string) {
   const assignedTeamId = String(formData.get("assigned_team_id") ?? "");
   if (!assignedTeamId) return null;
   if (assignedTeamId !== CREATE_TEAM) return assignedTeamId;
 
   const name = String(formData.get("new_team_name") ?? "").trim();
   const memberIds = formData.getAll("new_team_members").map(String).filter(Boolean);
-  if (!name) {
-    redirect(errorRedirect + "?error=" + encodeURIComponent("New team name is required."));
-  }
 
-  const supabase = await createClient();
   const { data, error } = await supabase
     .from("teams")
     .insert({ name, created_by: createdBy })
     .select("id")
     .single();
 
-  if (error || !data) {
-    redirect(errorRedirect + "?error=" + encodeURIComponent(error?.message ?? "Could not create team."));
-  }
+  if (error || !data) fail(errorPath, error?.message ?? "Could not create the team.");
 
   if (memberIds.length > 0) {
     const { error: membersError } = await supabase
       .from("team_members")
       .insert(memberIds.map((profile_id) => ({ team_id: data.id, profile_id })));
-    if (membersError) {
-      redirect(errorRedirect + "?error=" + encodeURIComponent(membersError.message));
-    }
+    if (membersError) fail(errorPath, membersError.message);
   }
 
   return data.id;
@@ -76,33 +91,33 @@ async function resolveAssignedTeamId(
 
 async function requireAdmin(redirectTo: string) {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "admin") {
-    redirect(redirectTo + "?error=" + encodeURIComponent("Only admins can manage projects."));
-  }
-  return profile!;
+  if (!profile || profile.role !== "admin") fail(redirectTo, "Only admins can manage projects.");
+  return profile;
 }
 
-function saveErrorMessage(message: string, projectType: "client" | "internal") {
-  if (projectType === "internal") return INTERNAL_SETUP_ERROR;
-  if (/project_type|client_id/i.test(message)) return INTERNAL_SETUP_ERROR;
+function saveErrorMessage(message: string) {
+  if (/project_type/i.test(message)) return INTERNAL_SETUP_ERROR;
   return message;
 }
 
-export async function createProjectRecord(formData: FormData) {
-  await requireAdmin("/projects");
+function revalidateProjectViews(projectId?: string) {
+  revalidatePath("/");
+  revalidatePath("/projects");
+  revalidatePath("/clients", "layout");
+  revalidatePath("/teams");
+  if (projectId) revalidatePath(`/projects/${projectId}`, "layout");
+}
 
+export async function createProjectRecord(formData: FormData) {
+  const errorPath = "/projects/new";
+  const profile = await requireAdmin(errorPath);
   const fields = readProjectFields(formData);
-  if (!fields.name) {
-    redirect(`/projects/new?error=` + encodeURIComponent("Project name is required."));
-  }
-  if (fields.project_type === "client" && !fields.client_id) {
-    redirect(`/projects/new?error=` + encodeURIComponent("Choose a client for a Client Project."));
-  }
+  validateProjectFields(fields, formData, errorPath);
 
   const supabase = await createClient();
-  const profile = await getCurrentProfile();
-  const assigned_team_id = await resolveAssignedTeamId(formData, profile!.id, "/projects/new");
-  const payload = { ...fields, assigned_team_id, created_by: profile!.id };
+  const client_id = await resolveClientId(supabase, fields.client_id, formData, { createdBy: profile.id, errorPath });
+  const assigned_team_id = await resolveAssignedTeamId(supabase, formData, profile.id, errorPath);
+  const payload = { ...fields, client_id, assigned_team_id, created_by: profile.id };
 
   let { data, error } = await supabase.from("projects").insert(payload).select("id").single();
 
@@ -113,33 +128,22 @@ export async function createProjectRecord(formData: FormData) {
     error = retry.error;
   }
 
-  if (error || !data) {
-    redirect(
-      `/projects/new?error=` +
-        encodeURIComponent(saveErrorMessage(error?.message ?? "Could not create project.", fields.project_type))
-    );
-  }
+  if (error || !data) fail(errorPath, saveErrorMessage(error?.message ?? "Could not create the project."));
 
-  revalidatePath("/projects");
-  revalidatePath("/teams");
-  redirect(`/projects/${data.id}`);
+  revalidateProjectViews();
+  redirect(withNotice(`/projects/${data.id}`, "Project created"));
 }
 
 export async function updateProjectRecord(projectId: string, formData: FormData) {
-  await requireAdmin(`/projects/${projectId}`);
-
+  const errorPath = `/projects/${projectId}/edit`;
+  const profile = await requireAdmin(errorPath);
   const fields = readProjectFields(formData);
-  if (!fields.name) {
-    redirect(`/projects/${projectId}?error=` + encodeURIComponent("Project name is required."));
-  }
-  if (fields.project_type === "client" && !fields.client_id) {
-    redirect(`/projects/${projectId}?error=` + encodeURIComponent("Choose a client for a Client Project."));
-  }
+  validateProjectFields(fields, formData, errorPath);
 
   const supabase = await createClient();
-  const profile = await getCurrentProfile();
-  const assigned_team_id = await resolveAssignedTeamId(formData, profile!.id, `/projects/${projectId}`);
-  const payload = { ...fields, assigned_team_id };
+  const client_id = await resolveClientId(supabase, fields.client_id, formData, { createdBy: profile.id, errorPath });
+  const assigned_team_id = await resolveAssignedTeamId(supabase, formData, profile.id, errorPath);
+  const payload = { ...fields, client_id, assigned_team_id };
 
   let { error } = await supabase.from("projects").update(payload).eq("id", projectId);
 
@@ -149,62 +153,60 @@ export async function updateProjectRecord(projectId: string, formData: FormData)
     error = retry.error;
   }
 
-  if (error) {
-    redirect(
-      `/projects/${projectId}?error=` + encodeURIComponent(saveErrorMessage(error.message, fields.project_type))
-    );
-  }
+  if (error) fail(errorPath, saveErrorMessage(error.message));
 
-  revalidatePath("/projects");
-  revalidatePath(`/projects/${projectId}`);
-  revalidatePath("/teams");
-  redirect(`/projects/${projectId}`);
+  revalidateProjectViews(projectId);
+  redirect(withNotice(`/projects/${projectId}`, "Changes saved"));
 }
 
 export async function deleteProjectRecord(projectId: string) {
-  await requireAdmin(`/projects/${projectId}`);
+  const errorPath = `/projects/${projectId}/edit`;
+  await requireAdmin(errorPath);
 
   const supabase = await createClient();
   const { error } = await supabase.from("projects").delete().eq("id", projectId);
+  if (error) fail(errorPath, error.message);
 
-  if (error) {
-    redirect(`/projects/${projectId}?error=` + encodeURIComponent(error.message));
+  revalidateProjectViews();
+  redirect(withNotice("/projects", "Project deleted"));
+}
+
+function normalizeUrl(raw: string) {
+  const value = raw.trim();
+  if (!value) return null;
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`;
+  try {
+    const url = new URL(withScheme);
+    return url.protocol === "http:" || url.protocol === "https:" ? url : null;
+  } catch {
+    return null;
   }
-
-  revalidatePath("/projects");
-  redirect("/projects");
 }
 
 export async function addProjectLink(projectId: string, formData: FormData) {
-  await requireAdmin(`/projects/${projectId}`);
+  const projectPath = `/projects/${projectId}`;
+  await requireAdmin(projectPath);
 
-  const label = String(formData.get("label") ?? "").trim();
-  const url = String(formData.get("url") ?? "").trim();
-  if (!label || !url) {
-    redirect(`/projects/${projectId}?tab=links&error=` + encodeURIComponent("Link label and URL are both required."));
-  }
+  const url = normalizeUrl(String(formData.get("url") ?? ""));
+  if (!url) fail(projectPath, "Enter a valid link, e.g. drive.google.com/…");
+  const label = String(formData.get("label") ?? "").trim() || url.hostname.replace(/^www\./, "");
 
   const supabase = await createClient();
-  const { error } = await supabase.from("project_links").insert({ project_id: projectId, label, url });
+  const { error } = await supabase.from("project_links").insert({ project_id: projectId, label, url: url.toString() });
+  if (error) fail(projectPath, error.message);
 
-  if (error) {
-    redirect(`/projects/${projectId}?tab=links&error=` + encodeURIComponent(error.message));
-  }
-
-  revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}?tab=links`);
+  revalidatePath(projectPath);
+  redirect(withNotice(projectPath, "Link added"));
 }
 
 export async function deleteProjectLink(projectId: string, linkId: string) {
-  await requireAdmin(`/projects/${projectId}`);
+  const projectPath = `/projects/${projectId}`;
+  await requireAdmin(projectPath);
 
   const supabase = await createClient();
   const { error } = await supabase.from("project_links").delete().eq("id", linkId);
+  if (error) fail(projectPath, error.message);
 
-  if (error) {
-    redirect(`/projects/${projectId}?tab=links&error=` + encodeURIComponent(error.message));
-  }
-
-  revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}?tab=links`);
+  revalidatePath(projectPath);
+  redirect(withNotice(projectPath, "Link removed"));
 }

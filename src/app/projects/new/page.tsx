@@ -3,49 +3,49 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { createProjectRecord } from "../actions";
 import { ProjectForm } from "../project-form";
-import { CARD } from "@/lib/card-styles";
+import { FormPage } from "@/components/form/fields";
 import { fetchAssignmentTeams } from "@/lib/teams";
-import { PageHeading } from "@/components/page-heading";
 
 export default async function NewProjectPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string; error?: string }>;
+  searchParams: Promise<{ client?: string; type?: string; error?: string }>;
 }) {
-  const { client, error } = await searchParams;
-  const profile = await getCurrentProfile();
+  const [{ client, type, error }, profile, supabase] = await Promise.all([
+    searchParams,
+    getCurrentProfile(),
+    createClient(),
+  ]);
   if (!profile || profile.role !== "admin") {
     redirect("/projects");
   }
 
-  const supabase = await createClient();
   const [{ data: clients }, { data: developers }, teams] = await Promise.all([
     supabase.from("clients").select("id, company_name").order("company_name"),
     supabase.from("profiles").select("id, full_name, email").order("full_name"),
     fetchAssignmentTeams(supabase),
   ]);
 
+  const backHref = client ? `/clients/${client}` : "/projects";
+
   return (
-    <div className="mx-auto w-full max-w-xl px-4 py-5 sm:px-6 sm:py-8">
-      <PageHeading
-        title="New project"
-        description="Client work or an internal product — both live in Projects."
+    <FormPage
+      backHref={backHref}
+      backLabel={client ? "Back to client" : "All projects"}
+      title="New project"
+      description="Client work or an internal product. You can change any of this later."
+    >
+      <ProjectForm
+        action={createProjectRecord}
+        clients={clients ?? []}
+        developers={developers ?? []}
+        teams={teams}
+        defaults={{ client_id: client, project_type: type === "internal" ? "internal" : "client" }}
+        error={error}
+        submitLabel="Create project"
+        pendingLabel="Creating…"
+        cancelHref={backHref}
       />
-      <div className={`${CARD} mt-6 p-5`}>
-        <ProjectForm
-          action={createProjectRecord}
-          clients={clients ?? []}
-          developers={developers ?? []}
-          teams={teams}
-          defaults={{
-            client_id: client,
-            project_type: client ? "client" : clients && clients.length > 0 ? "client" : "internal",
-          }}
-          error={error}
-          submitLabel="Create project"
-          showBudget
-        />
-      </div>
-    </div>
+    </FormPage>
   );
 }

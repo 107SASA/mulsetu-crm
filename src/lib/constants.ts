@@ -10,6 +10,21 @@ export const STAGE_OPTIONS: { value: Enums<"project_stage">; label: string }[] =
   { value: "on_hold_cancelled", label: "On Hold" },
 ];
 
+const STAGE_DOT_COLORS: Record<Enums<"project_stage">, string> = {
+  incoming: "bg-zinc-400",
+  requirements: "bg-violet-500",
+  in_progress: "bg-blue-500",
+  review_testing: "bg-amber-500",
+  client_review: "bg-orange-500",
+  completed: "bg-emerald-500",
+  on_hold_cancelled: "bg-zinc-300 dark:bg-zinc-600",
+};
+
+// Small colored dot that identifies a stage across the list, board, and detail views.
+export function stageDotColor(stage: Enums<"project_stage">) {
+  return STAGE_DOT_COLORS[stage];
+}
+
 export const PRIORITY_OPTIONS: { value: Enums<"priority_level">; label: string }[] = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },

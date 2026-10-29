@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { updatePassword } from "./actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { CARD } from "@/lib/card-styles";
 import { FIELD, FIELD_LABEL } from "@/lib/field-styles";
 import { BrandLogo } from "@/components/brand-logo";
@@ -69,9 +69,9 @@ export default async function ResetPasswordPage({
                   className={`mt-1 ${FIELD}`}
                 />
               </div>
-              <Button type="submit" variant="primary" className="w-full">
+              <SubmitButton className="w-full" pendingLabel="Updating…">
                 Update password
-              </Button>
+              </SubmitButton>
             </form>
           )}
         </div>

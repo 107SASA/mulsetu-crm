@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isNavItemActive, type NavItem } from "@/lib/nav";
@@ -8,6 +8,7 @@ import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { ProfileMenu } from "@/components/profile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandLogo } from "@/components/brand-logo";
+import { FlashToast } from "@/components/flash-toast";
 
 export function AppFrame({
   items,
@@ -24,10 +25,6 @@ export function AppFrame({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -53,7 +50,7 @@ export function AppFrame({
         }`}
       >
         <div className="flex items-center justify-between gap-2 px-3 py-3 lg:px-4">
-          <Link href="/" className="min-w-0" aria-label="Mulsetu CRM home">
+          <Link href="/" className="min-w-0" aria-label="Mulsetu CRM home" onClick={() => setOpen(false)}>
             <BrandLogo size="md" className="rounded-lg" />
           </Link>
           <button
@@ -75,6 +72,7 @@ export function AppFrame({
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setOpen(false)}
                 className={`flex min-h-11 items-center rounded-xl px-3 text-[15px] transition-colors lg:min-h-9 lg:text-sm ${
                   active
                     ? "bg-accent-50 font-medium text-accent-700 dark:bg-white/10 dark:text-white"
@@ -105,12 +103,27 @@ export function AppFrame({
             </svg>
           </button>
           <PageBreadcrumb />
+          {!pathname.startsWith("/leads/new") && (
+            <Link
+              href="/leads/new"
+              className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-accent-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-accent-700"
+              aria-label="Add a lead"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden>
+                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+              </svg>
+              Lead
+            </Link>
+          )}
           <ThemeToggle />
           <ProfileMenu fullName={fullName} email={email} role={role} />
         </header>
         <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[env(safe-area-inset-bottom)]">
           {children}
         </main>
+        <Suspense fallback={null}>
+          <FlashToast />
+        </Suspense>
       </div>
     </div>
   );

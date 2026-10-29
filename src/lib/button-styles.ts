@@ -1,4 +1,4 @@
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "danger-link";
 export type ButtonSize = "sm" | "md";
 
 const base =
@@ -16,6 +16,7 @@ const variants: Record<ButtonVariant, string> = {
   ghost: "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800",
   danger:
     "border border-red-300 text-red-700 bg-white hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:bg-zinc-900 dark:hover:bg-red-950",
+  "danger-link": "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40",
 };
 
 export function buttonClasses(variant: ButtonVariant = "secondary", size: ButtonSize = "md", className = "") {

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
+import { withNotice } from "@/lib/flash";
 
 async function requireAdmin() {
   const profile = await getCurrentProfile();
@@ -44,7 +45,7 @@ export async function createTeam(formData: FormData) {
 
   revalidatePath("/teams");
   revalidatePath("/projects");
-  redirect("/teams");
+  redirect(withNotice("/teams", "Team created"));
 }
 
 export async function deleteTeam(teamId: string) {
@@ -56,5 +57,5 @@ export async function deleteTeam(teamId: string) {
   }
   revalidatePath("/teams");
   revalidatePath("/projects");
-  redirect("/teams");
+  redirect(withNotice("/teams", "Team deleted"));
 }

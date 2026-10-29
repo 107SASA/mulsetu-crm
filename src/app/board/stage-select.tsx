@@ -1,42 +1,34 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { STAGE_OPTIONS } from "@/lib/constants";
 import type { Enums } from "@/lib/supabase/database.types";
-import { moveProjectStage } from "./actions";
 
+// Compact "Move to…" picker on a pipeline card — the touch-friendly
+// alternative to drag and drop. The board owns the optimistic state.
 export function StageSelect({
-  projectId,
   currentStage,
+  onMove,
 }: {
-  projectId: string;
   currentStage: Enums<"project_stage">;
+  onMove: (stage: Enums<"project_stage">) => void;
 }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
   return (
     <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
       <select
-        value={currentStage}
-        disabled={isPending}
+        value=""
         onChange={(e) => {
-          const newStage = e.target.value;
-          setError(null);
-          startTransition(async () => {
-            const result = await moveProjectStage(projectId, newStage);
-            if (result?.error) setError(result.error);
-          });
+          if (e.target.value) onMove(e.target.value as Enums<"project_stage">);
         }}
-        className="w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-700 transition-shadow focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/30 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+        aria-label="Move to stage"
+        className="w-full cursor-pointer rounded-md bg-transparent py-0.5 text-xs text-zinc-500 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent-500/30 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
-        {STAGE_OPTIONS.map((s) => (
+        <option value="">Move to…</option>
+        {STAGE_OPTIONS.filter((s) => s.value !== currentStage).map((s) => (
           <option key={s.value} value={s.value}>
-            Move to: {s.label}
+            {s.label}
           </option>
         ))}
       </select>
-      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

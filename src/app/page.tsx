@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { deadlineRisk } from "@/lib/project-risk";
 import { CARD, CARD_INTERACTIVE } from "@/lib/card-styles";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button-link";
 import { DeadlineBadge } from "@/components/deadline-badge";
 import { TaskCard } from "@/components/task-card";
 import { stageLabel } from "@/lib/constants";
@@ -28,6 +29,7 @@ export default async function Home({
     { data: todayTasks },
     { data: todaySchedule },
     { data: overdueTasks },
+    { data: dueLeads },
   ] = await Promise.all([
     supabase
       .from("projects")
@@ -75,6 +77,14 @@ export default async function Home({
           .neq("status", "done")
           .order("due_date")
           .limit(8),
+    // Leads whose follow-up date has arrived (empty until migration 0007).
+    supabase
+      .from("leads")
+      .select("id, contact_name, company_name, follow_up_date")
+      .in("status", ["new", "contacted", "qualified"])
+      .lte("follow_up_date", today)
+      .order("follow_up_date")
+      .limit(5),
   ]);
 
   const needsAttentionProjects = (openProjectsForRisk ?? []).filter(
@@ -98,27 +108,43 @@ export default async function Home({
             What needs attention, and where to go next.
           </p>
         </div>
-        <div className="grid w-full grid-cols-3 gap-2 text-sm sm:flex sm:w-auto sm:flex-row">
-          <Link
-            href="/projects"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-accent-600 px-2 py-2 text-center font-medium text-white shadow-sm hover:bg-accent-700 sm:px-3.5"
-          >
-            Projects
-          </Link>
-          <Link
-            href="/tasks"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-200 bg-white px-2 py-2 text-center font-medium text-zinc-700 hover:bg-zinc-50 sm:px-3.5 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-          >
-            Tasks
-          </Link>
-          <Link
-            href="/today"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-200 bg-white px-2 py-2 text-center font-medium text-zinc-700 hover:bg-zinc-50 sm:px-3.5 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-          >
-            Today
-          </Link>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <ButtonLink href="/tasks" variant="secondary">
+            My Work
+          </ButtonLink>
+          {isAdmin ? (
+            <ButtonLink href="/projects/new" variant="primary">
+              + New project
+            </ButtonLink>
+          ) : (
+            <ButtonLink href="/projects" variant="primary">
+              Projects
+            </ButtonLink>
+          )}
         </div>
       </div>
+
+      {dueLeads && dueLeads.length > 0 && (
+        <section className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Leads to follow up</h2>
+            <Link href="/leads" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+              All leads
+            </Link>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {dueLeads.map((lead) => (
+              <Link key={lead.id} href={`/leads/${lead.id}`} className={`${CARD_INTERACTIVE} p-3`}>
+                <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{lead.contact_name}</p>
+                <p className="truncate text-xs text-amber-600 dark:text-amber-400">
+                  {lead.company_name ? `${lead.company_name} · ` : ""}
+                  Follow up {lead.follow_up_date === today ? "today" : `since ${new Date(lead.follow_up_date!).toLocaleDateString()}`}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section>
@@ -160,8 +186,8 @@ export default async function Home({
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Today’s workload</h2>
-            <Link href="/today" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
-              Open Today
+            <Link href="/tasks" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-500">
+              Open My Work
             </Link>
           </div>
           {(!todaySchedule || todaySchedule.length === 0) && (!todayTasks || todayTasks.length === 0) ? (

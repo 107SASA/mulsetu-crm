@@ -43,14 +43,14 @@ export default async function LoginPage({
                   </Link>
                 }
               />
-              <SubmitButton pendingLabel="Signing in…">Sign in</SubmitButton>
+              <SubmitButton className="w-full" pendingLabel="Signing in…">Sign in</SubmitButton>
             </form>
           ) : (
             <form action={signUp} className="space-y-4">
               <Field label="Full name" name="full_name" type="text" autoComplete="name" required />
               <Field label="Email" name="email" type="email" autoComplete="email" required />
               <PasswordField autoComplete="new-password" required helperText="At least 8 characters." />
-              <SubmitButton pendingLabel="Creating account…">Create account</SubmitButton>
+              <SubmitButton className="w-full" pendingLabel="Creating account…">Create account</SubmitButton>
             </form>
           )}
         </div>

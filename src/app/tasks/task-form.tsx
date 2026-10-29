@@ -1,67 +1,29 @@
-import { PRIORITY_OPTIONS } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
-import { FIELD, FIELD_INLINE, FIELD_LABEL_SM } from "@/lib/field-styles";
+import { SubmitButton } from "@/components/ui/submit-button";
+import type { Person } from "@/components/form/people-picker";
+import { TaskFields } from "./task-fields";
 
+// Compact "add a task" form for a known project (the project page).
 export function TaskForm({
   action,
-  assignableProfiles,
+  people,
   currentUserId,
   isAdmin,
+  defaultAssignee,
 }: {
   action: (formData: FormData) => void;
-  assignableProfiles: { id: string; full_name: string; email: string }[];
+  people: Person[];
   currentUserId: string;
   isAdmin: boolean;
+  defaultAssignee?: string | null;
 }) {
   return (
-    <form action={action} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-      <div className="min-w-0 flex-1 sm:min-w-[10rem]">
-        <label htmlFor="title" className={FIELD_LABEL_SM}>
-          Task title
-        </label>
-        <input id="title" name="title" required className={`mt-1 ${FIELD}`} />
+    <form action={action} className="space-y-4">
+      <TaskFields people={people} isAdmin={isAdmin} currentUserId={currentUserId} defaultAssignee={defaultAssignee} />
+      <div className="flex justify-end">
+        <SubmitButton pendingLabel="Adding…" className="w-full sm:w-auto">
+          Add task
+        </SubmitButton>
       </div>
-
-      {isAdmin ? (
-        <div className="w-full min-w-0 sm:w-auto">
-          <label htmlFor="assigned_to" className={FIELD_LABEL_SM}>
-            Assign to
-          </label>
-          <select id="assigned_to" name="assigned_to" defaultValue={currentUserId} className={`mt-1 ${FIELD_INLINE}`}>
-            {assignableProfiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name || p.email}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : (
-        <input type="hidden" name="assigned_to" value={currentUserId} />
-      )}
-
-      <div className="w-full min-w-0 sm:w-auto">
-        <label htmlFor="priority" className={FIELD_LABEL_SM}>
-          Priority
-        </label>
-        <select id="priority" name="priority" defaultValue="medium" className={`mt-1 ${FIELD_INLINE}`}>
-          {PRIORITY_OPTIONS.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="w-full min-w-0 sm:w-auto">
-        <label htmlFor="due_date" className={FIELD_LABEL_SM}>
-          Due date
-        </label>
-        <input id="due_date" name="due_date" type="date" className={`mt-1 ${FIELD_INLINE}`} />
-      </div>
-
-      <Button type="submit" variant="secondary" className="w-full sm:w-auto">
-        + Add task
-      </Button>
     </form>
   );
 }

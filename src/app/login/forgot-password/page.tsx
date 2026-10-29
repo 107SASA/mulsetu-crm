@@ -37,7 +37,7 @@ export default async function ForgotPasswordPage({
               </label>
               <input id="email" name="email" type="email" autoComplete="email" required className={`mt-1 ${FIELD}`} />
             </div>
-            <SubmitButton pendingLabel="Sending…">Send reset link</SubmitButton>
+            <SubmitButton className="w-full" pendingLabel="Sending…">Send reset link</SubmitButton>
           </form>
         </div>
 
